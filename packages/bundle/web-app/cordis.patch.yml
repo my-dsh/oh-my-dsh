@@ -84,6 +84,20 @@
     - id: session-stats
       name: '@deepseek-ai/dsh-session-stats'
 
+    # Cross-session Token consumption capture: the independent SQLite provider
+    # backing the TokenUsageStore Service Definition, then the session/event
+    # listener that appends one per-request usage record per (provider, model).
+    # The listener injects `tokenUsageStore`, so it activates only after the
+    # provider mounts.
+    - id: token-usage-sqlite
+      name: '@deepseek-ai/dsh-token-usage/sqlite-provider'
+      config:
+        path: !!js dshHomePath('token-usage.sqlite')
+
+    - id: token-usage
+      name: '@deepseek-ai/dsh-token-usage'
+      inject: [tokenUsageStore]
+
     # Resolve bind host, SSH launch, and display once at boot, then mount the
     # matching dual-face directory picker. Mount -native or -browse directly in
     # an overlay to pin the interaction.
@@ -272,6 +286,12 @@
 
     - id: ui-trajectory
       name: '@deepseek-ai/dsh-client-ui-trajectory'
+
+    # Token consumption dashboard: a floating action button opening a panel
+    # that shows the daily per-(provider, model) token totals, throughput,
+    # TTFT, and cache-hit ratio over the tokenUsage wire domain.
+    - id: ui-token-usage
+      name: '@deepseek-ai/dsh-client-token-usage'
 
 # ── the agent plane moves behind agent presets ─────────────────────────────
 #

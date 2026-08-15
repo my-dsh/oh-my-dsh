@@ -109,6 +109,8 @@ import {
   inspectApiRemoteSession,
 } from '@deepseek-ai/dsh-api-remotes'
 import { canOpenNativePath, openNativePath, openNativeTextFile } from './native-path-opener.ts'
+import type { TokenUsageDailyGroup, TokenUsageDailySummary } from '@deepseek-ai/dsh-token-usage/types'
+import type { TokenUsageGroupView, TokenUsageDailySummaryView } from './api/token-usage.ts'
 
 /** Page size when history is called without maxMessages. */
 const DEFAULT_MAX_MESSAGES = 50
@@ -380,6 +382,52 @@ async function buildModelCatalog(ctx: Context): Promise<{
 function err<T>(request: RpcRequest<unknown>, error: RpcError): RpcResponse<T> {
   return { rpcId: request.rpcId, result: { ok: false, error } }
 }
+
+/**
+ * Derive one group's display averages from its summed buckets.
+ * @param group - the per-(provider, model) sums.
+ * @returns the group plus weighted throughput, arithmetic-mean TTFT, and cache-hit ratio.
+ */
+function tokenUsageGroupView(group: TokenUsageDailyGroup): TokenUsageGroupView {
+  const averageThroughput = group.decodeMs > 0 ? group.outputTokens / (group.decodeMs / 1000) : null
+  const averageTtftMs = group.ttftSamples > 0 ? group.ttftMs / group.ttftSamples : null
+  const billedInput = group.uncachedInputTokens + group.cacheReadTokens + group.cacheWriteTokens
+  const cacheHitRatio = billedInput > 0 ? group.cacheReadTokens / billedInput : null
+  return {
+    ...group,
+    averageThroughput: averageThroughput === null ? null : Math.round(averageThroughput * 1000) / 1000,
+    averageTtftMs: averageTtftMs === null ? null : Math.round(averageTtftMs),
+    cacheHitRatio: cacheHitRatio === null ? null : Math.round(cacheHitRatio * 10000) / 10000,
+  }
+}
+
+/** Map the store's daily summary onto the wire view by deriving each group's averages. */
+function toView(summary: TokenUsageDailySummary): TokenUsageDailySummaryView {
+  return {
+    date: summary.date,
+    groups: summary.groups.map(tokenUsageGroupView),
+    totals: tokenUsageGroupView(summary.totals),
+  }
+}
+
+/** Return the store or undefined; thin wrapper so the three tokenUsage methods share one guard. */
+function getTokenUsageStoreOrUndefined(ctx: Context): import('@deepseek-ai/dsh-token-usage/types').TokenUsageStore | undefined {
+  return ctx.get('tokenUsageStore')
+}
+
+/** Return the store, or short-circuit with the standard "unavailable" error response. */
+function requireTokenUsageStore<T>(ctx: Context, request: RpcRequest<unknown>): { store: import('@deepseek-ai/dsh-token-usage/types').TokenUsageStore } | { error: RpcResponse<T> } {
+  const store = getTokenUsageStoreOrUndefined(ctx)
+  if (store === undefined) {
+    return { error: err<T>(request, {
+      code: 'internal',
+      message: 'token usage is unavailable: this deployment does not mount @deepseek-ai/dsh-token-usage',
+      details: {},
+    }) }
+  }
+  return { store }
+}
+
 
 /**
  * The RPC refusal a preset failure becomes, or undefined when the failure is
@@ -3690,6 +3738,48 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             },
           },
         )
+      },
+    },
+
+    tokenUsage: {
+      dailySummary(request) {
+        const check = requireTokenUsageStore<TokenUsageDailySummaryView>(ctx, request)
+        if ('error' in check) return Promise.resolve(check.error)
+        try {
+          return Promise.resolve(ok(request, toView(check.store.dailySummary(request.payload.date))))
+        } catch (error) {
+          return Promise.resolve(err<TokenUsageDailySummaryView>(request, {
+            code: 'internal',
+            message: `token usage daily summary failed: ${error instanceof Error ? error.message : String(error)}`,
+            details: {},
+          }))
+        }
+      },
+      dailySummaryRange(request) {
+        const check = requireTokenUsageStore<TokenUsageDailySummaryView>(ctx, request)
+        if ('error' in check) return Promise.resolve(check.error)
+        try {
+          return Promise.resolve(ok(request, toView(check.store.dailySummaryRange(request.payload.startDate, request.payload.endDate))))
+        } catch (error) {
+          return Promise.resolve(err<TokenUsageDailySummaryView>(request, {
+            code: 'internal',
+            message: `token usage daily summary range failed: ${error instanceof Error ? error.message : String(error)}`,
+            details: {},
+          }))
+        }
+      },
+      purge(request) {
+        const check = requireTokenUsageStore<{ deleted: number }>(ctx, request)
+        if ('error' in check) return Promise.resolve(check.error)
+        try {
+          return Promise.resolve(ok(request, { deleted: check.store.purge(request.payload.before) }))
+        } catch (error) {
+          return Promise.resolve(err<{ deleted: number }>(request, {
+            code: 'internal',
+            message: `token usage purge failed: ${error instanceof Error ? error.message : String(error)}`,
+            details: {},
+          }))
+        }
       },
     },
 

@@ -34,6 +34,7 @@ import { deriveEventMessage, foldSurface } from '@deepseek-ai/dsh-session/surfac
 import type {
   ApiProxy, ClientRequest, ClientResponse, HistoryEntry, HostFrame, MuxFrame, RpcReceipt,
   ModelProviderGroup, ModelSelection, RpcRequest, RpcResponse, RpcResult, ServerRequest, ServerResponse, SessionSummary,
+  TokenUsageDailySummaryView,
   ToolCallView, ToolEventView, ToolResultView, WorkspaceId, WorkspaceView,
 } from './api.ts'
 import type { RequestPayload, ResponseValue, RpcMethodMap } from '@deepseek-ai/dsh-host-apiproxy/api'
@@ -351,6 +352,36 @@ function fixtureUsage(turn: number, step: number): TokenUsage {
     cacheReadTokens: turn === 0 ? 0 : 80,
     cacheWriteTokens: turn % 10 === 0 ? 4 : 0,
   }
+}
+
+/**
+ * Fixed daily-summary sample for the dashboard fixture: two provider/model
+ * groups plus the cross-group totals. The host store computes the real
+ * aggregation; this keeps the dashboard renderable without a host.
+ * @param date - the requested day key (echoed into the summary).
+ */
+function fixtureTokenUsageSummary(date: string): TokenUsageDailySummaryView {
+  const groups = [
+    { provider: 'deepseek', model: 'deepseek-chat', requests: 12, uncachedInputTokens: 3600, outputTokens: 8650, cacheReadTokens: 9200, cacheWriteTokens: 320, ttftMs: 51840, ttftSamples: 12, decodeMs: 64500, averageThroughput: 134.105, averageTtftMs: 4320, cacheHitRatio: 0.7188 },
+    { provider: 'deepseek', model: 'deepseek-reasoner', requests: 8, uncachedInputTokens: 4080, outputTokens: 14200, cacheReadTokens: 6100, cacheWriteTokens: 180, ttftMs: 71200, ttftSamples: 8, decodeMs: 52144, averageThroughput: 272.42, averageTtftMs: 8900, cacheHitRatio: 0.5992 },
+  ]
+  type GroupRow = (typeof groups)[number]
+  const sumField = (rows: readonly GroupRow[], key: keyof GroupRow): number =>
+    rows.reduce((acc, g) => acc + (g[key] as number), 0)
+  const sums = (key: keyof GroupRow): number => sumField(groups, key)
+  const decodeMs = sums('decodeMs')
+  const ttftMs = sums('ttftMs')
+  const ttftSamples = sums('ttftSamples')
+  const totals = {
+    provider: 'total', model: 'total', requests: sums('requests'),
+    uncachedInputTokens: sums('uncachedInputTokens'), outputTokens: sums('outputTokens'),
+    cacheReadTokens: sums('cacheReadTokens'), cacheWriteTokens: sums('cacheWriteTokens'),
+    ttftMs, ttftSamples, decodeMs,
+    averageThroughput: sums('outputTokens') / (decodeMs / 1000),
+    averageTtftMs: ttftSamples > 0 ? ttftMs / ttftSamples : null,
+    cacheHitRatio: sums('cacheReadTokens') / (sums('uncachedInputTokens') + sums('cacheReadTokens') + sums('cacheWriteTokens')),
+  }
+  return { date, groups, totals }
 }
 
 /** fx-alpha history script: 75 turns (~150+ messages -> 4 pages at PAGE_MESSAGES=50),
@@ -2962,6 +2993,13 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         models: fixtureModelGroups().flatMap(group => group.models.map(model => ({ id: model.id, name: model.name }))),
       }),
     },
+    tokenUsage: {
+      // A fixed sample so the dashboard renders a non-empty table in dev and
+      // fixture-driven tests; the host store is the real aggregation source.
+      dailySummary: request => Promise.resolve(ok(request, fixtureTokenUsageSummary(request.payload.date))),
+      dailySummaryRange: request => Promise.resolve(ok(request, fixtureTokenUsageSummary(`${request.payload.startDate}~${request.payload.endDate}`))),
+      purge: request => Promise.resolve(ok(request, { deleted: 0 })),
+    },
     respond(message: ClientResponse): Promise<RpcReceipt> {
       // Same routing discipline as the host: rpcId first, then the payload's
       // audit correlation; a settled or unknown id is not-pending.
@@ -3129,6 +3167,9 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'llm.providers': return this.api.llm.providers(request)
       case 'llm.models': return this.api.llm.models(request)
       case 'llm.discoverModels': return this.api.llm.discoverModels(request, signal)
+      case 'tokenUsage.dailySummary': return this.api.tokenUsage.dailySummary(request)
+      case 'tokenUsage.dailySummaryRange': return this.api.tokenUsage.dailySummaryRange(request)
+      case 'tokenUsage.purge': return this.api.tokenUsage.purge(request)
     }
   }
 

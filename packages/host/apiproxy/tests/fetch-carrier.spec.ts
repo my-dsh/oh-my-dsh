@@ -282,6 +282,17 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
         return { rpcId: request.rpcId, result: { ok: true, value: { models: [] } } }
       },
     },
+    tokenUsage: {
+      async dailySummary(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { date: '', groups: [], totals: { provider: 'total', model: 'total', requests: 0, uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, ttftMs: 0, ttftSamples: 0, decodeMs: 0, averageThroughput: null, averageTtftMs: null, cacheHitRatio: null } } } }
+      },
+      async dailySummaryRange(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { date: '', groups: [], totals: { provider: 'total', model: 'total', requests: 0, uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, ttftMs: 0, ttftSamples: 0, decodeMs: 0, averageThroughput: null, averageTtftMs: null, cacheHitRatio: null } } } }
+      },
+      async purge(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { deleted: 0 } } }
+      },
+    },
     events: {
       mux: (_request, signal) => stream(muxFrames, signal),
       host: (_request, signal) => stream(hostFrames, signal),

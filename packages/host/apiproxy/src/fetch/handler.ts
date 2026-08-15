@@ -70,6 +70,11 @@ import {
   subagentListRequestSchema,
   subagentPromptRequestSchema,
 } from '../api/subagents.schema.ts'
+import {
+  tokenUsageDailySummaryRangeRequestSchema,
+  tokenUsageDailySummaryRequestSchema,
+  tokenUsagePurgeRequestSchema,
+} from '../api/token-usage.schema.ts'
 
 /**
  * Unary dispatch table, keyed by (and compiler-locked to) RpcMethodMap: a map row without a
@@ -140,6 +145,9 @@ const UNARY_ROUTES: UnaryRoutes = {
   'llm.providers': { schema: llmProvidersRequestSchema, invoke: (api, r) => api.llm.providers(r) },
   'llm.models': { schema: llmModelsRequestSchema, invoke: (api, r) => api.llm.models(r) },
   'llm.discoverModels': { schema: llmDiscoverModelsRequestSchema, invoke: (api, r, signal) => api.llm.discoverModels(r, signal) },
+  'tokenUsage.dailySummary': { schema: tokenUsageDailySummaryRequestSchema, invoke: (api, r) => api.tokenUsage.dailySummary(r) },
+  'tokenUsage.dailySummaryRange': { schema: tokenUsageDailySummaryRangeRequestSchema, invoke: (api, r) => api.tokenUsage.dailySummaryRange(r) },
+  'tokenUsage.purge': { schema: tokenUsagePurgeRequestSchema, invoke: (api, r) => api.tokenUsage.purge(r) },
 }
 
 /** Route lookup that narrows an arbitrary path segment to a map key (single cast point for the string→key refinement). */

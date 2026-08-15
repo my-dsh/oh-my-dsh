@@ -62,6 +62,10 @@ import {
 } from '../api/credentials.schema.ts'
 import { llmDiscoverModelsValueSchema, llmModelsValueSchema, llmProvidersValueSchema } from '../api/llm.schema.ts'
 import {
+  tokenUsageDailySummaryValueSchema,
+  tokenUsagePurgeValueSchema,
+} from '../api/token-usage.schema.ts'
+import {
   subagentHistoryValueSchema,
   subagentInterruptValueSchema,
   subagentListValueSchema,
@@ -161,6 +165,11 @@ export interface IApiClient {
     models(payload: RequestPayload<'llm.models'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'llm.models'>>>
     discoverModels(payload: RequestPayload<'llm.discoverModels'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'llm.discoverModels'>>>
   }
+  tokenUsage: {
+    dailySummary(payload: RequestPayload<'tokenUsage.dailySummary'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'tokenUsage.dailySummary'>>>
+    dailySummaryRange(payload: RequestPayload<'tokenUsage.dailySummaryRange'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'tokenUsage.dailySummaryRange'>>>
+    purge(payload: RequestPayload<'tokenUsage.purge'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'tokenUsage.purge'>>>
+  }
   /** client-response passthrough (rpcId is a backfill of the server-request's id — never minted here). */
   respond(message: ClientResponse, signal?: AbortSignal): Promise<RpcReceipt>
 }
@@ -222,6 +231,9 @@ const UNARY_VALUE_SCHEMAS: { [K in keyof RpcMethodMap]: z.ZodType<Wire<ResponseV
   'llm.providers': llmProvidersValueSchema,
   'llm.models': llmModelsValueSchema,
   'llm.discoverModels': llmDiscoverModelsValueSchema,
+  'tokenUsage.dailySummary': tokenUsageDailySummaryValueSchema,
+  'tokenUsage.dailySummaryRange': tokenUsageDailySummaryValueSchema,
+  'tokenUsage.purge': tokenUsagePurgeValueSchema,
 }
 
 /** Default timeout for bounded unary calls (rpc-compare 2026-07-19: a hung host must not leave callers pending forever). */
@@ -498,6 +510,12 @@ export abstract class AbstractApiClient implements IApiClient {
     providers: (payload, signal) => this.callUnary('llm.providers', payload, signal),
     models: (payload, signal) => this.callUnary('llm.models', payload, signal),
     discoverModels: (payload, signal) => this.callUnary('llm.discoverModels', payload, signal),
+  }
+
+  readonly tokenUsage: IApiClient['tokenUsage'] = {
+    dailySummary: (payload, signal) => this.callUnary('tokenUsage.dailySummary', payload, signal),
+    dailySummaryRange: (payload, signal) => this.callUnary('tokenUsage.dailySummaryRange', payload, signal),
+    purge: (payload, signal) => this.callUnary('tokenUsage.purge', payload, signal),
   }
 
   readonly events: IApiClient['events'] = {

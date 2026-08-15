@@ -128,6 +128,11 @@ function scriptedApi(overrides: {
       discoverModels: err,
       ...overrides.llm,
     },
+    tokenUsage: {
+      dailySummary: r => err(r),
+      dailySummaryRange: r => err(r),
+      purge: r => err(r),
+    },
     events: { mux: () => empty<MuxFrame>(), host: () => empty<HostFrame>(), ...overrides.events },
     respond: overrides.respond ?? (() => Promise.resolve({ accepted: false as const, reason: 'not-pending' as const })),
     downloads: { sessionLog: async () => new Response('stub', { status: 404 }) },
