@@ -23,7 +23,7 @@ import type {
  * The on-disk schema version for the token-usage database. Bumped only on a
  * breaking change to the `token_usage_events` layout.
  */
-export const TOKEN_USAGE_SCHEMA_VERSION = 1
+export const TOKEN_USAGE_SCHEMA_VERSION = 2
 
 /** SQLite application id protecting unrelated databases from store writes. */
 export const TOKEN_USAGE_APPLICATION_ID = 0x44535455 // 'DSTU'
@@ -41,6 +41,9 @@ interface GroupRow {
   provider: string
   model: string
   requests: number
+  turns: number
+  llmMs: number
+  toolMs: number
   uncachedInputTokens: number
   outputTokens: number
   cacheReadTokens: number
@@ -119,6 +122,8 @@ CREATE TABLE IF NOT EXISTS token_usage_events (
   cache_write_tokens INTEGER NOT NULL,
   reasoning_tokens INTEGER,
   ttft_ms INTEGER,
+  llm_ms INTEGER NOT NULL DEFAULT 0,
+  tool_ms INTEGER NOT NULL DEFAULT 0,
   decode_ms INTEGER,
   PRIMARY KEY (session_id, turn, step)
 );
@@ -129,8 +134,8 @@ const INSERT_SQL = `
 INSERT INTO token_usage_events (
   time, date, session_id, provider, model, turn, step,
   uncached_input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
-  reasoning_tokens, ttft_ms, decode_ms
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  reasoning_tokens, ttft_ms, llm_ms, tool_ms, decode_ms
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (session_id, turn, step) DO UPDATE SET
   time = excluded.time,
   date = excluded.date,
@@ -142,6 +147,8 @@ ON CONFLICT (session_id, turn, step) DO UPDATE SET
   cache_write_tokens = excluded.cache_write_tokens,
   reasoning_tokens = excluded.reasoning_tokens,
   ttft_ms = excluded.ttft_ms,
+  llm_ms = excluded.llm_ms,
+  tool_ms = excluded.tool_ms,
   decode_ms = excluded.decode_ms
 `
 
@@ -149,6 +156,9 @@ const SELECT_GROUPS_SQL = `
 SELECT
   provider, model,
   COUNT(*) AS requests,
+  COUNT(DISTINCT session_id || ':' || turn) AS turns,
+  COALESCE(SUM(llm_ms), 0) AS llmMs,
+  COALESCE(SUM(tool_ms), 0) AS toolMs,
   COALESCE(SUM(uncached_input_tokens), 0) AS uncachedInputTokens,
   COALESCE(SUM(output_tokens), 0) AS outputTokens,
   COALESCE(SUM(cache_read_tokens), 0) AS cacheReadTokens,
@@ -166,6 +176,9 @@ const SELECT_GROUPS_RANGE_SQL = `
 SELECT
   provider, model,
   COUNT(*) AS requests,
+  COUNT(DISTINCT session_id || ':' || turn) AS turns,
+  COALESCE(SUM(llm_ms), 0) AS llmMs,
+  COALESCE(SUM(tool_ms), 0) AS toolMs,
   COALESCE(SUM(uncached_input_tokens), 0) AS uncachedInputTokens,
   COALESCE(SUM(output_tokens), 0) AS outputTokens,
   COALESCE(SUM(cache_read_tokens), 0) AS cacheReadTokens,
@@ -218,6 +231,8 @@ export class SqliteTokenUsageStore extends Service implements TokenUsageStore {
         record.cacheWriteTokens,
         record.reasoningTokens,
         record.ttftMs,
+        record.llmMs,
+        record.toolMs,
         record.decodeMs,
       )
     } catch (error) {
@@ -250,6 +265,9 @@ export class SqliteTokenUsageStore extends Service implements TokenUsageStore {
 /** Sum a list of group rows into one cross-group totals row keyed by the sentinel `(total, total)`. */
 function sumGroups(rows: readonly GroupRow[]): TokenUsageDailyGroup {
   let requests = 0
+  let turns = 0
+  let llmMs = 0
+  let toolMs = 0
   let uncachedInputTokens = 0
   let outputTokens = 0
   let cacheReadTokens = 0
@@ -259,6 +277,9 @@ function sumGroups(rows: readonly GroupRow[]): TokenUsageDailyGroup {
   let decodeMs = 0
   for (const row of rows) {
     requests += row.requests
+    turns += row.turns
+    llmMs += row.llmMs
+    toolMs += row.toolMs
     uncachedInputTokens += row.uncachedInputTokens
     outputTokens += row.outputTokens
     cacheReadTokens += row.cacheReadTokens
@@ -271,6 +292,9 @@ function sumGroups(rows: readonly GroupRow[]): TokenUsageDailyGroup {
     provider: 'total',
     model: 'total',
     requests,
+    turns,
+    llmMs,
+    toolMs,
     uncachedInputTokens,
     outputTokens,
     cacheReadTokens,

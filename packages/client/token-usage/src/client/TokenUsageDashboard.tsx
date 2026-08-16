@@ -22,7 +22,7 @@ import type {
 import { Button, IconDataOutline16, IconRefreshOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TokenUsageDashboardInjected } from './slots.ts'
 import {
-  endOfLastMonthLocalKey, formatCacheHit, formatThroughput, formatTtft, formatTtftSeconds, formatTokens,
+  endOfLastMonthLocalKey, formatCacheHit, formatDuration, formatThroughput, formatTtft, formatTtftSeconds, formatTokens,
   orderedGroups, startOfLastMonthLocalKey, startOfMonth, startOfMonthLocalKey, todayLocalKey, yesterdayLocalKey,
 } from './format.ts'
 import type { DashboardKey } from './locales.ts'
@@ -272,6 +272,16 @@ function KpiCards({
           <span className={css.kpiValue}>{totals.requests.toLocaleString('en-US')}</span>
           <span className={css.kpiHint}>{t?.('kpi.requestUnit') ?? 'Recorded requests'}</span>
         </div>
+        <div className={css.kpiCard}>
+          <span className={css.kpiLabel}>{t?.('kpi.turns') ?? 'Turns'}</span>
+          <span className={css.kpiValue}>{totals.turns.toLocaleString('en-US')}</span>
+          <span className={css.kpiHint}>{t?.('kpi.turnsUnit') ?? 'Recorded turns'}</span>
+        </div>
+        <div className={css.kpiCard}>
+          <span className={css.kpiLabel}>{t?.('kpi.llm') ?? 'Avg time'}</span>
+          <span className={css.kpiValue}>{formatDuration(totals.averageLlmMs)}</span>
+          <span className={css.kpiHint}>{t?.('kpi.firstToken') ?? 'First token latency'}</span>
+        </div>
       </div>
     </section>
   )
@@ -295,11 +305,14 @@ function SummaryTable({
         <tr>
           <th className={css.colProvider}>{t?.('col.provider') ?? 'Provider'}</th>
           <th className={css.colModel}>{t?.('col.model') ?? 'Model'}</th>
+          <th className={css.numCol}>{t?.('col.turns') ?? 'Turns'}</th>
           <th className={css.numCol}>{t?.('col.input') ?? 'Input'}</th>
           <th className={css.numCol}>{t?.('col.output') ?? 'Output'}</th>
           <th className={css.numCol}>{t?.('col.cacheHit') ?? 'Cache hit'}</th>
           <th className={css.numCol}>{t?.('col.throughput') ?? 'Avg speed'}</th>
           <th className={css.numCol}>{t?.('col.ttft') ?? 'Avg TTFT'}</th>
+          <th className={css.numCol}>{t?.('col.llm') ?? 'Avg time'}</th>
+          <th className={css.numCol}>{t?.('col.tool') ?? 'Tool time'}</th>
           <th className={css.numCol}>{t?.('col.requests') ?? 'Requests'}</th>
         </tr>
       </thead>
@@ -326,11 +339,14 @@ function GroupRow({
         <span className={css.badge}>{group.provider}</span>
       </td>
       <td className={css.colModel}>{group.model}</td>
+      <td className={css.numCol}>{group.turns}</td>
       <td className={css.numCol}>{formatTokens(group.uncachedInputTokens)}</td>
       <td className={css.numCol}>{formatTokens(group.outputTokens)}</td>
       <td className={clsx(css.numCol, cacheHigh ? css.cacheHitHigh : undefined)}>{formatCacheHit(group)}</td>
       <td className={css.numCol}>{formatThroughput(group)}</td>
       <td className={clsx(css.numCol, ttftWarn ? css.ttftWarn : undefined)}>{formatTtft(group)}</td>
+      <td className={css.numCol}>{formatDuration(group.averageLlmMs)}</td>
+      <td className={css.numCol}>{formatDuration(group.toolMs)}</td>
       <td className={css.numCol}>{group.requests}</td>
     </tr>
   )

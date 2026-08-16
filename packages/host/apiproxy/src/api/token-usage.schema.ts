@@ -27,6 +27,9 @@ export const tokenUsageGroupViewSchema = z.object({
   provider: z.string(),
   model: z.string(),
   requests: z.number().int().nonnegative(),
+  turns: z.number().int().nonnegative(),
+  llmMs: z.number().nonnegative(),
+  toolMs: z.number().nonnegative(),
   uncachedInputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
   cacheReadTokens: z.number().int().nonnegative(),
@@ -36,6 +39,7 @@ export const tokenUsageGroupViewSchema = z.object({
   decodeMs: z.number().nonnegative(),
   averageThroughput: z.number().nonnegative().nullable(),
   averageTtftMs: z.number().nonnegative().nullable(),
+  averageLlmMs: z.number().nonnegative().nullable(),
   cacheHitRatio: z.number().min(0).max(1).nullable(),
 }).strict()
 

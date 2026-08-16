@@ -30,8 +30,8 @@
 }
 
 .modal {
-  max-width: 760px;
-  width: min(92vw, 760px);
+  max-width: 1180px;
+  width: min(96vw, 1180px);
 }
 
 .content {
@@ -173,8 +173,14 @@
 
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .kpiGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {

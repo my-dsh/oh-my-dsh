@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TokenUsageDailySummaryView, TokenUsageGroupView } from '@deepseek-ai/dsh-api-remotes/client'
 import {
-  endOfLastMonthLocalKey, endOfMonth, formatCacheHit, formatThroughput, formatTtft, formatTtftSeconds, formatTokens,
+  endOfLastMonthLocalKey, endOfMonth, formatCacheHit, formatDuration, formatThroughput, formatTtft, formatTtftSeconds, formatTokens,
   orderedGroups, startOfLastMonthLocalKey, startOfMonth, startOfMonthLocalKey, todayLocalKey, yesterdayLocalKey,
 } from '../src/client/format.ts'
 
@@ -10,6 +10,9 @@ import {
 function group(over: Partial<TokenUsageGroupView> & Pick<TokenUsageGroupView, 'provider' | 'model'>): TokenUsageGroupView {
   return {
     requests: 1,
+    turns: 1,
+    llmMs: 0,
+    toolMs: 0,
     uncachedInputTokens: 0,
     outputTokens: 0,
     cacheReadTokens: 0,
@@ -19,6 +22,7 @@ function group(over: Partial<TokenUsageGroupView> & Pick<TokenUsageGroupView, 'p
     decodeMs: 0,
     averageThroughput: null,
     averageTtftMs: null,
+    averageLlmMs: null,
     cacheHitRatio: null,
     ...over,
   }
@@ -52,6 +56,13 @@ describe('token-usage format helpers', () => {
     expect(formatTtftSeconds(4320.4)).toBe('4.32 s')
     expect(formatTtftSeconds(2405)).toBe('2.40 s')
     expect(formatTtftSeconds(null)).toBe('—')
+  })
+
+  it('renders a compact duration, — when absent', () => {
+    expect(formatDuration(812)).toBe('812ms')
+    expect(formatDuration(45_200)).toBe('45.2s')
+    expect(formatDuration(162_000)).toBe('2m42s')
+    expect(formatDuration(null)).toBe('—')
   })
 
   it('renders cache-hit ratio as a percentage with one decimal, — when no billed input', () => {

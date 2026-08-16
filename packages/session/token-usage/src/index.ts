@@ -42,6 +42,10 @@ interface OpenStep {
   readonly step: number
   readonly startTime: number
   firstTokenTime: number | null
+  /** Tool wall time from `tool/call` → `tool/result` pairs that landed inside this step. */
+  toolMs: number
+  /** Dispatch times of tool calls whose result has not landed, by callId. */
+  readonly pendingCalls: Record<string, number>
 }
 
 /**
@@ -84,6 +88,8 @@ export function apply(ctx: Context): void {
           step: event.data.step,
           startTime: event.time,
           firstTokenTime: null,
+          toolMs: 0,
+          pendingCalls: {},
         })
         return
       case 'assistant/chunk': {
@@ -91,6 +97,31 @@ export function apply(ctx: Context): void {
         if (open === undefined || open.turn !== event.data.turn || open.step !== event.data.step) return
         if (open.firstTokenTime !== null || !isTokenDelta(event.data.chunk)) return
         setOpenStep(session, { ...open, firstTokenTime: event.time })
+        return
+      }
+      case 'tool/call': {
+        const open = openStepOf(session)
+        if (open === undefined || open.turn !== event.data.turn || open.step !== event.data.step) return
+        setOpenStep(session, { ...open, pendingCalls: { ...open.pendingCalls, [event.data.callId]: event.time } })
+        return
+      }
+      case 'tool/result': {
+        const open = openStepOf(session)
+        if (open === undefined) return
+        // Own-key check mirrors session-stats: callId is provider-minted, so
+        // a prototype property name on a result with no recorded call must read
+        // as unmatched rather than an inherited function.
+        const callId = event.data.message.source.callId
+        const dispatched = Object.hasOwn(open.pendingCalls, callId) ? open.pendingCalls[callId] : undefined
+        if (dispatched === undefined) return
+        const pendingCalls = Object.fromEntries(
+          Object.entries(open.pendingCalls).filter(([id]) => id !== callId),
+        )
+        setOpenStep(session, {
+          ...open,
+          toolMs: open.toolMs + Math.max(0, event.time - dispatched),
+          pendingCalls,
+        })
         return
       }
       case 'assistant/message': {
@@ -138,6 +169,7 @@ function recordFromEvent(
 ): TokenUsageEventRecord {
   const ttftMs = open.firstTokenTime !== null ? Math.max(0, open.firstTokenTime - open.startTime) : null
   const outputTokens = typeof usage.outputTokens === 'number' ? usage.outputTokens : 0
+  const llmMs = Math.max(0, event.time - open.startTime)
   const decodeMs = open.firstTokenTime !== null
     ? Math.max(0, event.time - open.firstTokenTime)
     : null
@@ -155,6 +187,8 @@ function recordFromEvent(
     cacheWriteTokens: usage.cacheWriteTokens ?? 0,
     reasoningTokens: typeof usage.reasoningTokens === 'number' ? usage.reasoningTokens : null,
     ttftMs,
+    llmMs,
+    toolMs: open.toolMs,
     decodeMs,
   }
 }

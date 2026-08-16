@@ -228,12 +228,12 @@ export class FakeApiClient implements IApiClient {
     dailySummary: payload => this.record('tokenUsage.dailySummary', payload, Promise.resolve(ok({
       date: '',
       groups: [],
-      totals: { provider: 'total', model: 'total', requests: 0, uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, ttftMs: 0, ttftSamples: 0, decodeMs: 0, averageThroughput: null, averageTtftMs: null, cacheHitRatio: null },
+      totals: { provider: 'total', model: 'total', requests: 0, turns: 0, llmMs: 0, toolMs: 0, uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, ttftMs: 0, ttftSamples: 0, decodeMs: 0, averageThroughput: null, averageTtftMs: null, averageLlmMs: null, cacheHitRatio: null },
     }))),
     dailySummaryRange: payload => this.record('tokenUsage.dailySummaryRange', payload, Promise.resolve(ok({
       date: '',
       groups: [],
-      totals: { provider: 'total', model: 'total', requests: 0, uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, ttftMs: 0, ttftSamples: 0, decodeMs: 0, averageThroughput: null, averageTtftMs: null, cacheHitRatio: null },
+      totals: { provider: 'total', model: 'total', requests: 0, turns: 0, llmMs: 0, toolMs: 0, uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, ttftMs: 0, ttftSamples: 0, decodeMs: 0, averageThroughput: null, averageTtftMs: null, averageLlmMs: null, cacheHitRatio: null },
     }))),
     purge: payload => this.record('tokenUsage.purge', payload, Promise.resolve(ok({ deleted: 0 }))),
   }

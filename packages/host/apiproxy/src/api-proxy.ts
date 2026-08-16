@@ -391,12 +391,14 @@ function err<T>(request: RpcRequest<unknown>, error: RpcError): RpcResponse<T> {
 function tokenUsageGroupView(group: TokenUsageDailyGroup): TokenUsageGroupView {
   const averageThroughput = group.decodeMs > 0 ? group.outputTokens / (group.decodeMs / 1000) : null
   const averageTtftMs = group.ttftSamples > 0 ? group.ttftMs / group.ttftSamples : null
+  const averageLlmMs = group.requests > 0 ? group.llmMs / group.requests : null
   const billedInput = group.uncachedInputTokens + group.cacheReadTokens + group.cacheWriteTokens
   const cacheHitRatio = billedInput > 0 ? group.cacheReadTokens / billedInput : null
   return {
     ...group,
     averageThroughput: averageThroughput === null ? null : Math.round(averageThroughput * 1000) / 1000,
     averageTtftMs: averageTtftMs === null ? null : Math.round(averageTtftMs),
+    averageLlmMs: averageLlmMs === null ? null : Math.round(averageLlmMs),
     cacheHitRatio: cacheHitRatio === null ? null : Math.round(cacheHitRatio * 10000) / 10000,
   }
 }

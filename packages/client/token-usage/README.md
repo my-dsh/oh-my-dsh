@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Token consumption dashboard for the web GUI. A floating action button pinned to the bottom-right of the shell opens a modal panel that shows the token usage of one calendar day, aggregated cross-session and grouped by `(provider, model)`: summed input and output tokens, request count, average throughput (weighted tokens/sec), average TTFT (first-token latency), and average cache-hit ratio. The panel carries a date picker (today by default) and a refresh action.
+Token consumption dashboard for the web GUI. A floating action button pinned to the bottom-right of the shell opens a modal panel that shows the token usage of one calendar day, aggregated cross-session and grouped by `(provider, model)`: summed input and output tokens, distinct turns, request count, average throughput (weighted tokens/sec), average TTFT (first-token latency), average LLM step time, matched tool wall time, and average cache-hit ratio. The panel carries a date picker (today by default) and a refresh action.
 
 The plugin contributes one entry to the root-scoped `shell.overlay` list slot (owned and declared by `@deepseek-ai/dsh-client-ui-layout`), so the dashboard composes into every screen without owning a layout region. Data reaches the component solely through the inject face — the `tokenUsage` domain of the wire client (`api.tokenUsage.dailySummary({ date })`) and the bound copy translator — never through `ctx`. The fetch lifecycle (loading / ready / error) and the selected date stay component-local: nothing here survives a remount or is read by another entry.
 

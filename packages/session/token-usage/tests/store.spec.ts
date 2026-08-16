@@ -25,6 +25,8 @@ function record(over: Partial<TokenUsageEventRecord> & Pick<TokenUsageEventRecor
     cacheWriteTokens: 0,
     reasoningTokens: null,
     ttftMs: null,
+    llmMs: 0,
+    toolMs: 0,
     decodeMs: null,
     ...over,
   }
@@ -38,17 +40,17 @@ describe('SqliteTokenUsageStore', () => {
       const ctx = new Context()
       const store = new SqliteTokenUsageStore(ctx, db)
       const date = '2026-08-10'
-      store.append(record({ time: 1, date, provider: 'deepseek', model: 'deepseek-chat', turn: 0, step: 0, uncachedInputTokens: 100, outputTokens: 40, cacheReadTokens: 300, ttftMs: 800, decodeMs: 2000 }))
-      store.append(record({ time: 2, date, provider: 'deepseek', model: 'deepseek-chat', turn: 1, step: 0, uncachedInputTokens: 60, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 40, ttftMs: 1200, decodeMs: 1000 }))
-      store.append(record({ time: 3, date, provider: 'deepseek', model: 'deepseek-reasoner', turn: 0, step: 0, uncachedInputTokens: 200, outputTokens: 300, reasoningTokens: 150, ttftMs: 5000, decodeMs: 4000 }))
+      store.append(record({ time: 1, date, provider: 'deepseek', model: 'deepseek-chat', turn: 0, step: 0, uncachedInputTokens: 100, outputTokens: 40, cacheReadTokens: 300, ttftMs: 800, llmMs: 900, toolMs: 500, decodeMs: 2000 }))
+      store.append(record({ time: 2, date, provider: 'deepseek', model: 'deepseek-chat', turn: 1, step: 0, uncachedInputTokens: 60, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 40, ttftMs: 1200, llmMs: 700, toolMs: 0, decodeMs: 1000 }))
+      store.append(record({ time: 3, date, provider: 'deepseek', model: 'deepseek-reasoner', turn: 1, step: 1, uncachedInputTokens: 200, outputTokens: 300, reasoningTokens: 150, ttftMs: 5000, llmMs: 2000, toolMs: 0, decodeMs: 4000 }))
 
       const summary = store.dailySummary(date)
       expect(summary.date).toBe(date)
       expect(summary.groups).toHaveLength(2)
       const chat = summary.groups[0]!
-      expect(chat).toMatchObject({ provider: 'deepseek', model: 'deepseek-chat', requests: 2, uncachedInputTokens: 160, outputTokens: 60, cacheReadTokens: 300, cacheWriteTokens: 40, ttftMs: 2000, ttftSamples: 2, decodeMs: 3000 })
+      expect(chat).toMatchObject({ provider: 'deepseek', model: 'deepseek-chat', requests: 2, turns: 2, llmMs: 1600, toolMs: 500, uncachedInputTokens: 160, outputTokens: 60, cacheReadTokens: 300, cacheWriteTokens: 40, ttftMs: 2000, ttftSamples: 2, decodeMs: 3000 })
       const totals = summary.totals
-      expect(totals).toMatchObject({ provider: 'total', model: 'total', requests: 3, uncachedInputTokens: 360, outputTokens: 360, cacheReadTokens: 300, cacheWriteTokens: 40, ttftSamples: 3, decodeMs: 7000 })
+      expect(totals).toMatchObject({ provider: 'total', model: 'total', requests: 3, turns: 3, llmMs: 3600, toolMs: 500, uncachedInputTokens: 360, outputTokens: 360, cacheReadTokens: 300, cacheWriteTokens: 40, ttftSamples: 3, decodeMs: 7000 })
       db.close()
       void store
     } finally {

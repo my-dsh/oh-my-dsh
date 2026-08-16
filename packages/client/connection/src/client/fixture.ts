@@ -362,8 +362,8 @@ function fixtureUsage(turn: number, step: number): TokenUsage {
  */
 function fixtureTokenUsageSummary(date: string): TokenUsageDailySummaryView {
   const groups = [
-    { provider: 'deepseek', model: 'deepseek-chat', requests: 12, uncachedInputTokens: 3600, outputTokens: 8650, cacheReadTokens: 9200, cacheWriteTokens: 320, ttftMs: 51840, ttftSamples: 12, decodeMs: 64500, averageThroughput: 134.105, averageTtftMs: 4320, cacheHitRatio: 0.7188 },
-    { provider: 'deepseek', model: 'deepseek-reasoner', requests: 8, uncachedInputTokens: 4080, outputTokens: 14200, cacheReadTokens: 6100, cacheWriteTokens: 180, ttftMs: 71200, ttftSamples: 8, decodeMs: 52144, averageThroughput: 272.42, averageTtftMs: 8900, cacheHitRatio: 0.5992 },
+    { provider: 'deepseek', model: 'deepseek-chat', requests: 12, turns: 9, llmMs: 681000, toolMs: 124000, uncachedInputTokens: 3600, outputTokens: 8650, cacheReadTokens: 9200, cacheWriteTokens: 320, ttftMs: 51840, ttftSamples: 12, decodeMs: 64500, averageThroughput: 134.105, averageTtftMs: 4320, averageLlmMs: 56750, cacheHitRatio: 0.7188 },
+    { provider: 'deepseek', model: 'deepseek-reasoner', requests: 8, turns: 7, llmMs: 420000, toolMs: 0, uncachedInputTokens: 4080, outputTokens: 14200, cacheReadTokens: 6100, cacheWriteTokens: 180, ttftMs: 71200, ttftSamples: 8, decodeMs: 52144, averageThroughput: 272.42, averageTtftMs: 8900, averageLlmMs: 52500, cacheHitRatio: 0.5992 },
   ]
   type GroupRow = (typeof groups)[number]
   const sumField = (rows: readonly GroupRow[], key: keyof GroupRow): number =>
@@ -372,13 +372,17 @@ function fixtureTokenUsageSummary(date: string): TokenUsageDailySummaryView {
   const decodeMs = sums('decodeMs')
   const ttftMs = sums('ttftMs')
   const ttftSamples = sums('ttftSamples')
+  const llmMs = sums('llmMs')
+  const requests = sums('requests')
   const totals = {
-    provider: 'total', model: 'total', requests: sums('requests'),
+    provider: 'total', model: 'total', requests,
+    turns: sums('turns'), llmMs, toolMs: sums('toolMs'),
     uncachedInputTokens: sums('uncachedInputTokens'), outputTokens: sums('outputTokens'),
     cacheReadTokens: sums('cacheReadTokens'), cacheWriteTokens: sums('cacheWriteTokens'),
     ttftMs, ttftSamples, decodeMs,
     averageThroughput: sums('outputTokens') / (decodeMs / 1000),
     averageTtftMs: ttftSamples > 0 ? ttftMs / ttftSamples : null,
+    averageLlmMs: requests > 0 ? llmMs / requests : null,
     cacheHitRatio: sums('cacheReadTokens') / (sums('uncachedInputTokens') + sums('cacheReadTokens') + sums('cacheWriteTokens')),
   }
   return { date, groups, totals }

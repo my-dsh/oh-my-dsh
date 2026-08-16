@@ -75,6 +75,22 @@ export function formatTtftSeconds(averageTtftMs: number | null): string {
 }
 
 /**
+ * Compact duration: `812ms` under a second, `45.2s` under a minute, `2m42s`
+ * from there on. Used for the derived average LLM step time and the summed
+ * tool wall time.
+ * @param ms - the duration in milliseconds.
+ * @returns the compact display string, or `—` when the duration is absent.
+ */
+export function formatDuration(ms: number | null): string {
+  if (ms === null) return '—'
+  if (ms < 1_000) return `${Math.round(ms)}ms`
+  const seconds = ms / 1_000
+  if (seconds < 60) return `${Math.round(seconds * 10) / 10}s`
+  const whole = Math.round(seconds)
+  return `${Math.floor(whole / 60)}m${whole % 60}s`
+}
+
+/**
  * Cache-hit ratio as a percentage with one decimal.
  * @param group - the row view carrying the derived ratio.
  * @returns `—` when the ratio is absent (no billed input tokens).

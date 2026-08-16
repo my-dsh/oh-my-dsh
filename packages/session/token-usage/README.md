@@ -25,11 +25,11 @@ The `sqlite-provider` entry opens (or creates) the database and registers one `S
 
 ## The per-call record
 
-One row per (session, turn, step): `time`, `date`, `sessionId`, `provider`, `model`, `turn`, `step`, the four disjoint token buckets (`uncachedInputTokens`, `outputTokens`, `cacheReadTokens`, `cacheWriteTokens`), optional `reasoningTokens`, and the timing facts `ttftMs` and `decodeMs` (null when the step never produced a first token). The primary key is `(sessionId, turn, step)`, so a re-reported sample for the same step replaces rather than duplicates — matching `token-meter`'s replace-not-add semantics.
+One row per (session, turn, step): `time`, `date`, `sessionId`, `provider`, `model`, `turn`, `step`, the four disjoint token buckets (`uncachedInputTokens`, `outputTokens`, `cacheReadTokens`, `cacheWriteTokens`), optional `reasoningTokens`, and the timing facts `ttftMs`, `llmMs` (step wall time from `step/start` to the assembled `assistant/message`), `toolMs` (matched `tool/call` → `tool/result` wall time landed inside the step), and `decodeMs` (null when the step never produced a first token). The primary key is `(sessionId, turn, step)`, so a re-reported sample for the same step replaces rather than duplicates — matching `token-meter`'s replace-not-add semantics.
 
 ## The daily summary
 
-`dailySummary(date)` returns `{ date, groups, totals }`. Each group sums the four token buckets, counts `requests`, and carries the TTFT/decode totals plus their sample counts. The `totals` row is the cross-group union. Averages are derived client-side so the consumer chooses weighting:
+`dailySummary(date)` returns `{ date, groups, totals }`. Each group sums the four token buckets, counts `requests` and distinct `turns`, sums the `llmMs` / `toolMs` durations, and carries the TTFT/decode totals plus their sample counts. The `totals` row is the cross-group union (its `turns` is the union of each group's distinct-turn sums, so it may over-count an individual turn that spans more than one provider/model group). Averages are derived client-side so the consumer chooses weighting:
 
 - **Average throughput** (tokens/sec) = `outputTokens / (decodeMs / 1000)`, a weighted mean that resists being skewed by a single fast small request.
 - **Average TTFT** = `ttftMs / ttftSamples`, an arithmetic mean (each request's first-token wait is equally significant to the user).
@@ -37,7 +37,7 @@ One row per (session, turn, step): `time`, `date`, `sessionId`, `provider`, `mod
 
 ## Schema versioning
 
-The database carries its own monotonic `SCHEMA_VERSION` (currently 1), independent of the session-persistence schema. An empty database initializes at the current version; every other version rejects rather than migrating in place (pre-release stance: backends reject old on-disk formats). The `(date, provider, model)` index serves every daily-summary query.
+The database carries its own monotonic `SCHEMA_VERSION` (currently 2), independent of the session-persistence schema. An empty database initializes at the current version; every other version rejects rather than migrating in place (pre-release stance: backends reject old on-disk formats). The `(date, provider, model)` index serves every daily-summary query.
 
 ## Model Experience
 

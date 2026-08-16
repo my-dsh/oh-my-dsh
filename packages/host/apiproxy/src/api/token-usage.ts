@@ -20,6 +20,8 @@ export interface TokenUsageGroupView extends TokenUsageDailyGroup {
   averageThroughput: number | null
   /** Arithmetic mean TTFT in ms (ttftMs / ttftSamples); null when ttftSamples is 0. */
   averageTtftMs: number | null
+  /** Arithmetic mean step wall time in ms (llmMs / requests); null when requests is 0. */
+  averageLlmMs: number | null
   /** Cache-hit ratio in [0,1] (cacheReadTokens / billed input); null when billed input is 0. */
   cacheHitRatio: number | null
 }

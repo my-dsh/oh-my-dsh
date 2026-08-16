@@ -52,6 +52,10 @@ export interface TokenUsageEventRecord {
   reasoningTokens: number | null
   /** First-token latency in milliseconds, when the request recorded one; null otherwise. */
   ttftMs: number | null
+  /** Step wall time from `step/start` to the assembled `assistant/message`, in milliseconds. */
+  llmMs: number
+  /** Tool wall time from `tool/call` to `tool/result` pairs that landed inside this step, in milliseconds. */
+  toolMs: number
   /** Decode wall time in milliseconds, when output tokens and timing were recorded; null otherwise. */
   decodeMs: number | null
 }
@@ -74,6 +78,12 @@ export interface TokenUsageDailyGroup {
   model: string
   /** Number of recorded calls for this (provider, model) on the day. */
   requests: number
+  /** Distinct session turns that produced at least one recorded call for this (provider, model) on the day. */
+  turns: number
+  /** Summed step wall time (`step/start` → `assistant/message`) over this group's calls. */
+  llmMs: number
+  /** Summed matched tool call→result wall time over this group's calls. */
+  toolMs: number
   /** Summed uncached prompt-input tokens. */
   uncachedInputTokens: number
   /** Summed output tokens (reasoning already included). */
