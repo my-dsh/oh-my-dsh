@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { RpcId } from '@deepseek-ai/dsh-host-apiproxy/api'
 import type { TokenUsageDailySummaryView } from '@deepseek-ai/dsh-api-remotes/client'
 import type { TokenUsageDashboardInjected } from '../src/client/slots.ts'
 import { TokenUsageDashboard } from '../src/client/TokenUsageDashboard.tsx'
@@ -31,7 +32,7 @@ const SUMMARY: TokenUsageDailySummaryView = {
   },
 }
 
-const ok = (value: TokenUsageDailySummaryView) => ({ result: { ok: true as const, value } })
+const ok = (value: TokenUsageDailySummaryView) => ({ rpcId: RpcId('fake'), result: { ok: true as const, value } })
 
 function apiMock() {
   return {
