@@ -2,6 +2,8 @@
 
 English | [中文](README.zh.md)
 
+> **Fork notice**: This repository is a personal fork of [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness), for private use. On top of upstream it adds a **token statistics panel** that tracks per-session and cross-session token consumption per (provider, model), including request counts and timing metrics, rendered in a floating dashboard in the shell overlay.
+
 DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
 
 It uses an architecture where **everything is a plugin**, and is powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper).

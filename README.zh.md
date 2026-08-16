@@ -2,6 +2,8 @@
 
 [English](README.md) | 中文
 
+> **Fork 说明**：本仓库是 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 的个人 fork，仅供自用。在上游基础上新增了 **token 统计面板**，按 (provider, model) 统计单会话与跨会话的 token 消耗、请求数与耗时指标，并以 shell overlay 中的悬浮面板展示。
+
 DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的开源 agent harness（智能体框架）。
 
 它采用**一切皆插件**的架构，并由 [Cordis](https://github.com/cordiverse/cordis) 驱动，其设计参见论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper)。
