@@ -1,6 +1,6 @@
 # @deepseek-ai/dsh-token-usage
 
-English
+English | [中文](README.zh.md)
 
 Cross-session token-usage persistence: a SQLite-backed `TokenUsageStore` Service Definition that captures per-request provider-reported usage from the session firehose for daily, per-(provider, model) aggregation. The capture side mirrors `session-stats`'s timing fold (`step/start` → first token chunk → `assistant/message`) so the TTFT and decode durations agree with the session-scoped projection, and joins the route from the assembled message's `source` (provider/model travel with the usage on `assistant/message`).
 
@@ -41,7 +41,7 @@ The database carries its own monotonic `SCHEMA_VERSION` (currently 2), independe
 
 ## Model Experience
 
-None — this package only observes the session stream and persists provider-reported accounting; it never contributes to a model request.
+None, as the package only observes the session stream and persists provider-reported accounting; it never contributes to a model request.
 
 #### KV Cache effect
 

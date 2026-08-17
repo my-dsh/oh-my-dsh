@@ -235,8 +235,8 @@ function KpiCards({
   totals: TokenUsageGroupView
   t: ((key: DashboardKey) => string) | undefined
 }) {
-  const totalInput = totals.uncachedInputTokens ?? 0
-  const totalOutput = totals.outputTokens ?? 0
+  const totalInput = totals.uncachedInputTokens
+  const totalOutput = totals.outputTokens
   const totalTokens = totalInput + totalOutput
   const cacheHitHint = useMemo(() => {
     if (totals.cacheHitRatio === null) return undefined

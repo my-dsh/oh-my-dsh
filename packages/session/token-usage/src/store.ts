@@ -28,7 +28,10 @@ export const TOKEN_USAGE_SCHEMA_VERSION = 2
 /** SQLite application id protecting unrelated databases from store writes. */
 export const TOKEN_USAGE_APPLICATION_ID = 0x44535455 // 'DSTU'
 
-/** Calendar-day key (`YYYY-MM-DD`) in local timezone. */
+/** Calendar-day key (`YYYY-MM-DD`) in local timezone.
+ * @param time - epoch milliseconds to key.
+ * @returns the local-timezone calendar-day key.
+ */
 export function dayKey(time: number): string {
   const date = new Date(time)
   const year = date.getFullYear()
@@ -305,7 +308,9 @@ function sumGroups(rows: readonly GroupRow[]): TokenUsageDailyGroup {
   }
 }
 
-/** Stable random id helper for tests that mint a standalone database path. */
+/** Stable random id helper for tests that mint a standalone database path.
+ * @returns a unique database filename in the current directory.
+ */
 export function tempDbPath(): string {
   return `token-usage-${randomUUID()}.db`
 }

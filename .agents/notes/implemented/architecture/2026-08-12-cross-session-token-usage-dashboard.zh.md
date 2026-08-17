@@ -30,6 +30,12 @@ Status: implemented
 
 `token_usage_events` 表为每个 (session, turn, step) 存储一行，使用 `PRIMARY KEY (session_id, turn, step)` 和 `(date, provider, model)` 索引。`INSERT ... ON CONFLICT DO UPDATE` 模式意味着对同一 (session, turn, step) 的重复追加会替换而非复制——宿主的 session-event 重放语义已经保证了幂等事件交付。
 
+### Session-event 监听器镜像 session-stats 投影计时
+
+监听器挂接到 `ctx.on('session/event')`，并通过 WeakMap 跟踪每个会话的打开 (turn, step) 状态。它捕获 `step/start` → 首个 `assistant/chunk`（用于 TTFT 计时）→ `assistant/message`（用于 usage + provider/model 关联）。这与 `session-stats` 投影的计时折叠一致：第一个带 `usage` 字段的 assistant/message 是 token 桶与路由身份共存的唯一关联点。
+
+`append()` 调用自含失败：它捕获写入错误并记录警告，绝不传播进 cordis `session/event` 派发（该派发为 stop-on-throw）。
+
 ### Wire 均值是派生的，不是存储的
 
 宿主在数据穿过 wire 前计算三个派生均值：
@@ -45,6 +51,10 @@ Status: implemented
 FAB + 面板通过 `ctx.slots.inject('shell.overlay', () => ctx.slots.register(...))` 注册到 ui-layout 拥有的 `shell.overlay` 列表槽。面板的 fetch 生命周期（loading/ready/error）和选中日期是组件本地的：这里没有任何状态需要跨挂载存活，也没有其他条目读取，符合 slot 系统的 live-data 规范（规则 5："只有组件知道它 → 本地状态"）。
 
 inject face 返回 `{ api, t }` —— wire 客户端的 `tokenUsage` 域和绑定的 locale 翻译器。组件从不看到 `ctx`。
+
+### 开发与测试用的 fixture 数据
+
+连接 fixture（`fixture.ts`）返回一个固定的双分组日汇总（deepseek-chat + deepseek-reasoner），带计算好的合计，使仪表盘在 dev 模式和 fixture 驱动的测试中无需运行宿主即可渲染已填充的表格。
 
 ## 测试
 

@@ -190,6 +190,7 @@ export function endOfMonth(dateKey: string): string {
  * model). The cross-group totals live in a separate field on the summary
  * and render independently, so they are excluded here.
  * @param summary - the daily summary view carrying the grouped rows.
+ * @returns the per-(provider, model) rows in stable (provider, model) display order.
  */
 export function orderedGroups(summary: TokenUsageDailySummaryView): readonly TokenUsageGroupView[] {
   const rows = [...summary.groups]

@@ -778,6 +778,13 @@
         "@deepseek-ai/dsh-code-runtime-worker-thread"
       ]
     },
+    "packages/bundle/token-usage-dashboard": {
+      "ignoreDependencies": [
+        "@deepseek-ai/.+"
+      ],
+      "entry": [],
+      "project": []
+    },
     "packages/bundle/web-app": {
       "ignoreDependencies": [
         "@deepseek-ai/.+"

@@ -9,7 +9,7 @@
 将一个包作为 out-of-tree 组合包装入某个 profile；`dsh plugin` 在首次使用时初始化该 profile、在 profile 目录内转发给 pnpm，然后把安装好的包调和进 profile 的 bundle 层列表。
 
 ```sh
-dsh plugin --profile <名字> add @deepseek-ai/dsh-token-usage-dashboard
+dsh plugin --profile <name> add @deepseek-ai/dsh-token-usage-dashboard
 ```
 
 浏览器面板只在 web 表层内渲染，因此目标 profile 必须已经提供客户端运行时、连接层与 `shell.overlay` 布局。它不是独立的应用程序：它叠加在某个 web 表层 profile 之上，并在 `dsh web` 启动时挂载。要求 `PATH` 上有 `pnpm`（转发器通过它执行），以及提供各命名行所依赖的内置依赖的 `dsh` 安装。

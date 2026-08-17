@@ -22,7 +22,7 @@ The installed rows are the same three `@deepseek-ai/dsh-web-app` mounts for this
 
 ## Model Experience
 
-None. The inserted listener only observes the session stream and persists provider-reported accounting, and the panel is a browser statistics UI; nothing here reaches a model request.
+None, as the inserted listener only observes the session stream and persists provider-reported accounting, and the panel is a browser statistics UI; nothing here reaches a model request.
 
 #### KV Cache effect
 
