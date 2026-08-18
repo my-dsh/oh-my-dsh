@@ -113,16 +113,27 @@ export function todayLocalKey(): string {
 }
 
 /**
- * Yesterday's date as a `YYYY-MM-DD` key in the user's local timezone.
- * @returns the day key for the instant one day before today.
+ * The local day key for the instant `days` days before today. Pass `0` to
+ * get today, `1` for yesterday. Calendar math (not a fixed offset) keeps it
+ * correct across month and year boundaries.
+ * @param days - the non-negative number of days to step back.
+ * @returns the `YYYY-MM-DD` key for that day in the user's local timezone.
  */
-export function yesterdayLocalKey(): string {
+export function daysAgoLocalKey(days: number): string {
   const now = new Date()
-  now.setDate(now.getDate() - 1)
+  now.setDate(now.getDate() - days)
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+/**
+ * Yesterday's date as a `YYYY-MM-DD` key in the user's local timezone.
+ * @returns the day key for the instant one day before today.
+ */
+export function yesterdayLocalKey(): string {
+  return daysAgoLocalKey(1)
 }
 
 /**

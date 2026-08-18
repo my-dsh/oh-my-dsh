@@ -85,4 +85,31 @@ describe('TokenUsageDashboard', () => {
     expect(screen.getAllByText('9').length).toBeGreaterThan(0)
     expect(api.tokenUsage.dailySummary).toHaveBeenCalledTimes(1)
   })
+
+  it('requests an inclusive 7-day window (not [yesterday, today]) when the 近 7 天 preset is clicked', async () => {
+    // Fake only `Date` so the day keys are deterministic while @testing-library's
+    // `waitFor` keeps polling on the real timer queue.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 7, 10, 12, 0, 0))
+    try {
+      const api = apiMock()
+      render(<TokenUsageDashboard api={api} t={t} />)
+      await openPanel()
+      // Wait for the initial day fetch to settle before driving the preset.
+      await waitFor(() => { expect(api.tokenUsage.dailySummary).toHaveBeenCalledTimes(1) })
+
+      await act(async () => {
+        screen.getByRole('button', { name: '近 7 天' }).click()
+        await Promise.resolve()
+      })
+      await waitFor(() => { expect(api.tokenUsage.dailySummaryRange).toHaveBeenCalledTimes(1) })
+      // Today (2026-08-10) plus the previous six days → [2026-08-04, 2026-08-10].
+      expect(api.tokenUsage.dailySummaryRange).toHaveBeenCalledWith({
+        startDate: '2026-08-04',
+        endDate: '2026-08-10',
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

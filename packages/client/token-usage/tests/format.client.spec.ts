@@ -1,9 +1,22 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { TokenUsageDailySummaryView, TokenUsageGroupView } from '@deepseek-ai/dsh-api-remotes/client'
 import {
-  endOfLastMonthLocalKey, endOfMonth, formatCacheHit, formatDuration, formatThroughput, formatTtft, formatTtftSeconds, formatTokens,
-  orderedGroups, startOfLastMonthLocalKey, startOfMonth, startOfMonthLocalKey, todayLocalKey, yesterdayLocalKey,
+  daysAgoLocalKey,
+  endOfLastMonthLocalKey,
+  endOfMonth,
+  formatCacheHit,
+  formatDuration,
+  formatThroughput,
+  formatTtft,
+  formatTtftSeconds,
+  formatTokens,
+  orderedGroups,
+  startOfLastMonthLocalKey,
+  startOfMonth,
+  startOfMonthLocalKey,
+  todayLocalKey,
+  yesterdayLocalKey,
 } from '../src/client/format.ts'
 
 /** A group row with the averages already derived (the host computes them). */
@@ -88,6 +101,22 @@ describe('token-usage format helpers', () => {
   it('produces a YYYY-MM-DD local day key for the current instant', () => {
     expect(todayLocalKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(yesterdayLocalKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('steps back the requested number of calendar days, crossing month and year boundaries', () => {
+    expect(daysAgoLocalKey(0)).toBe(todayLocalKey())
+    expect(daysAgoLocalKey(1)).toBe(yesterdayLocalKey())
+    // 2026-08-10 minus 6 days is 2026-08-04; minus 11 days crosses into July.
+    vi.useFakeTimers().setSystemTime(new Date(2026, 7, 10, 12, 0, 0))
+    try {
+      expect(daysAgoLocalKey(6)).toBe('2026-08-04')
+      expect(daysAgoLocalKey(11)).toBe('2026-07-30')
+      // Cross a year boundary.
+      vi.setSystemTime(new Date(2026, 0, 3, 12, 0, 0))
+      expect(daysAgoLocalKey(5)).toBe('2025-12-29')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('computes month boundaries from a date key', () => {

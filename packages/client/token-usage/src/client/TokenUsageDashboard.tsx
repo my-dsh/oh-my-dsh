@@ -22,7 +22,7 @@ import type {
 import { Button, IconDataOutline16, IconRefreshOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TokenUsageDashboardInjected } from './slots.ts'
 import {
-  endOfLastMonthLocalKey, formatCacheHit, formatDuration, formatThroughput, formatTtft, formatTtftSeconds, formatTokens,
+  daysAgoLocalKey, endOfLastMonthLocalKey, formatCacheHit, formatDuration, formatThroughput, formatTtft, formatTtftSeconds, formatTokens,
   orderedGroups, startOfLastMonthLocalKey, startOfMonth, startOfMonthLocalKey, todayLocalKey, yesterdayLocalKey,
 } from './format.ts'
 import type { DashboardKey } from './locales.ts'
@@ -131,11 +131,11 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
             </Button>
             <Button
               size="sm"
-              variant={mode === 'range' && startDate === todayLocalKey() && endDate === todayLocalKey() ? 'primary' : 'ghost'}
+              variant={mode === 'range' && startDate === daysAgoLocalKey(6) && endDate === todayLocalKey() ? 'primary' : 'ghost'}
               className={css.preset}
               onClick={() => {
                 const today = todayLocalKey()
-                const start = yesterdayLocalKey()
+                const start = daysAgoLocalKey(6)
                 setMode('range')
                 setStartDate(start)
                 setEndDate(today)
