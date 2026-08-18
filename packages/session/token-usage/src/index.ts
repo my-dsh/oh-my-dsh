@@ -35,7 +35,8 @@ export const inject = ['tokenUsageStore']
 
 /**
  * One open step's timing facts, tracked across the boundary events so the
- * record written at `assistant/message` carries TTFT and decode duration.
+ * record written at `step/end` carries TTFT, decode duration, and tool wall
+ * time.
  */
 interface OpenStep {
   readonly turn: number
@@ -46,6 +47,20 @@ interface OpenStep {
   toolMs: number
   /** Dispatch times of tool calls whose result has not landed, by callId. */
   readonly pendingCalls: Record<string, number>
+  /**
+   * Stashed at `assistant/message` for the `step/end` write. Null before the
+   * message assembles or when it carried no usage — in both cases no record is
+   * written. The write is deferred to `step/end` because tools execute after
+   * `assistant/message` (the agent loop dispatches `executeToolCalls` only
+   * after appending the assembled message), so tool wall time is incomplete at
+   * message-assembly time.
+   */
+  record: {
+    readonly time: number
+    readonly usage: TokenUsage
+    readonly provider: string
+    readonly model: string
+  } | null
 }
 
 /**
@@ -76,9 +91,11 @@ export function apply(ctx: Context): void {
   })
 
   /**
-   * Fold one event into the open-step state and, at `assistant/message`, write
-   * the per-call record. Mirrors `session-stats`'s boundary logic so TTFT and
-   * decode timings agree with the session-scoped projection.
+   * Fold one event into the open-step state. The per-call record is stashed at
+   * `assistant/message` and written at `step/end`, after tool calls dispatched
+   * by the agent loop have landed their results. Mirrors `session-stats`'s
+   * boundary logic so TTFT and decode timings agree with the session-scoped
+   * projection.
    */
   function captureEvent(session: Session, event: SessionEvent): void {
     switch (event.type) {
@@ -90,6 +107,7 @@ export function apply(ctx: Context): void {
           firstTokenTime: null,
           toolMs: 0,
           pendingCalls: {},
+          record: null,
         })
         return
       case 'assistant/chunk': {
@@ -130,23 +148,42 @@ export function apply(ctx: Context): void {
           clearOpenStep(session)
           return
         }
+        // A duplicate assembled message (defensive) finds the stash already
+        // set; ignore it so the first message's facts are preserved.
+        if (open.record !== null) return
         const usage = event.data.usage
         if (usage === undefined) {
           // No provider accounting for this call (e.g. a locally-served step
-          // with no usage); nothing durable to record.
+          // with no usage); nothing durable to record, and no record to
+          // update at step/end. Clear so tool events for this step are not
+          // tracked against a write that will never happen.
           clearOpenStep(session)
           return
         }
+        // Stash the message facts and keep the open step alive: tools execute
+        // after this event, so the record is written at step/end with the
+        // complete tool wall time.
         const source = event.data.message.source
-        const record = recordFromEvent(session, event, open, usage, source.provider, source.model)
-        clearOpenStep(session)
-        ctx.tokenUsageStore.append(record)
+        setOpenStep(session, {
+          ...open,
+          record: { time: event.time, usage, provider: source.provider, model: source.model },
+        })
         return
       }
-      case 'step/end':
+      case 'step/end': {
+        const open = openStepOf(session)
+        if (open === undefined) return
+        if (open.record !== null) {
+          const record = recordFromStashedStep(session, open)
+          ctx.tokenUsageStore.append(record)
+        }
+        clearOpenStep(session)
+        return
+      }
       case 'turn/end':
-        // A step that never assembled a message (cancelled, failed) leaves no
-        // record; drop the open-step state so it cannot leak into a later step.
+        // Safety net: step/end (in the loop's finally) should have already
+        // written and cleared. If it did not (a step that never entered), just
+        // clear the open step.
         clearOpenStep(session)
         return
       default:
@@ -156,36 +193,37 @@ export function apply(ctx: Context): void {
 }
 
 /**
- * Build the per-call record from the assembled message event, the open step's
- * timing facts, and the message's model source.
+ * Build the per-call record from the stashed `assistant/message` facts and the
+ * open step's accumulated timing (including tool wall time from `tool/call` →
+ * `tool/result` pairs that landed between `assistant/message` and `step/end`).
  */
-function recordFromEvent(
+function recordFromStashedStep(
   session: Session,
-  event: SessionEvent<'assistant/message'>,
   open: OpenStep,
-  usage: TokenUsage,
-  provider: string,
-  model: string,
 ): TokenUsageEventRecord {
+  // The sole caller (`step/end`) invokes this only when `open.record !== null`;
+  // a mutable property reached through the parameter cannot be narrowed here.
+  // oxlint-disable-next-line typescript/no-non-null-assertion -- guarded at the step/end call site
+  const record = open.record!
   const ttftMs = open.firstTokenTime !== null ? Math.max(0, open.firstTokenTime - open.startTime) : null
-  const outputTokens = typeof usage.outputTokens === 'number' ? usage.outputTokens : 0
-  const llmMs = Math.max(0, event.time - open.startTime)
+  const outputTokens = typeof record.usage.outputTokens === 'number' ? record.usage.outputTokens : 0
+  const llmMs = Math.max(0, record.time - open.startTime)
   const decodeMs = open.firstTokenTime !== null
-    ? Math.max(0, event.time - open.firstTokenTime)
+    ? Math.max(0, record.time - open.firstTokenTime)
     : null
   return {
-    time: event.time,
-    date: dayKey(event.time),
+    time: record.time,
+    date: dayKey(record.time),
     sessionId: String(session.id),
-    provider,
-    model,
-    turn: event.data.turn,
-    step: event.data.step,
-    uncachedInputTokens: usage.inputTokens,
+    provider: record.provider,
+    model: record.model,
+    turn: open.turn,
+    step: open.step,
+    uncachedInputTokens: record.usage.inputTokens,
     outputTokens,
-    cacheReadTokens: usage.cacheReadTokens ?? 0,
-    cacheWriteTokens: usage.cacheWriteTokens ?? 0,
-    reasoningTokens: typeof usage.reasoningTokens === 'number' ? usage.reasoningTokens : null,
+    cacheReadTokens: record.usage.cacheReadTokens ?? 0,
+    cacheWriteTokens: record.usage.cacheWriteTokens ?? 0,
+    reasoningTokens: typeof record.usage.reasoningTokens === 'number' ? record.usage.reasoningTokens : null,
     ttftMs,
     llmMs,
     toolMs: open.toolMs,
