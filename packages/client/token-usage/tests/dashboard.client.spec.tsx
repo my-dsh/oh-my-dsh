@@ -38,7 +38,7 @@ function apiMock() {
   return {
     tokenUsage: {
       dailySummary: vi.fn(async () => ok(SUMMARY)),
-      dailySummaryRange: vi.fn(async () => ok(SUMMARY)),
+      dailySummaryRange: vi.fn(async (_request: { startDate: string; endDate: string; timeZone: string }) => ok(SUMMARY)),
       purge: vi.fn(),
     },
   }
@@ -104,10 +104,12 @@ describe('TokenUsageDashboard', () => {
       })
       await waitFor(() => { expect(api.tokenUsage.dailySummaryRange).toHaveBeenCalledTimes(1) })
       // Today (2026-08-10) plus the previous six days → [2026-08-04, 2026-08-10].
-      expect(api.tokenUsage.dailySummaryRange).toHaveBeenCalledWith({
-        startDate: '2026-08-04',
-        endDate: '2026-08-10',
-      })
+      // The browser zone rides the same payload so the host bounds the day in the
+      // zone that derived it; the zone is the real environment's (Date is faked,
+      // Intl is not), so assert its shape rather than its value.
+      const call = api.tokenUsage.dailySummaryRange.mock.calls[0]![0]
+      expect(call).toMatchObject({ startDate: '2026-08-04', endDate: '2026-08-10' })
+      expect(call.timeZone).toMatch(/^(UTC|[A-Za-z][A-Za-z0-9_+.-]*(?:\/[A-Za-z0-9_+.-]+)+)$/)
     } finally {
       vi.useRealTimers()
     }

@@ -3748,7 +3748,8 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         const check = requireTokenUsageStore<TokenUsageDailySummaryView>(ctx, request)
         if ('error' in check) return Promise.resolve(check.error)
         try {
-          return Promise.resolve(ok(request, toView(check.store.dailySummary(request.payload.date))))
+          const { date, timeZone } = request.payload
+          return Promise.resolve(ok(request, toView(check.store.dailySummary(date, timeZone))))
         } catch (error) {
           return Promise.resolve(err<TokenUsageDailySummaryView>(request, {
             code: 'internal',
@@ -3761,7 +3762,8 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         const check = requireTokenUsageStore<TokenUsageDailySummaryView>(ctx, request)
         if ('error' in check) return Promise.resolve(check.error)
         try {
-          return Promise.resolve(ok(request, toView(check.store.dailySummaryRange(request.payload.startDate, request.payload.endDate))))
+          const { startDate, endDate, timeZone } = request.payload
+          return Promise.resolve(ok(request, toView(check.store.dailySummaryRange(startDate, endDate, timeZone))))
         } catch (error) {
           return Promise.resolve(err<TokenUsageDailySummaryView>(request, {
             code: 'internal',

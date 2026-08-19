@@ -18,7 +18,7 @@ Status: implemented
 
 1. **宿主插件**（`@deepseek-ai/dsh-token-usage`，`packages/session/token-usage/`）—— Service Definition（`TokenUsageStore`）加上独立的 SQLite provider 以及一个 `session/event` 监听器，为每个成功的模型调用追加一条使用记录。这是持久化事实源。
 
-2. **集中式 RPC 传输层扩展**（`packages/host/apiproxy/`）—— 两个新方法（`tokenUsage.dailySummary` 和 `tokenUsage.purge`）添加到现有 apiproxy 层，遵循文档化的扩展点：一个新文件对 + `ApiProxy` 上的一个字段 + 一行 map 行。
+2. **集中式 RPC 传输层扩展**（`packages/host/apiproxy/`）—— 三个一元方法（`tokenUsage.dailySummary`、`tokenUsage.dailySummaryRange` 和 `tokenUsage.purge`）添加到现有 apiproxy 层，遵循文档化的扩展点：一个新文件对 + `ApiProxy` 上的一个字段 + 一行 map 行。
 
 3. **客户端插件**（`@deepseek-ai/dsh-client-token-usage`，`packages/client/token-usage/`）—— 一个浮动操作按钮（FAB）和弹出面板，注册到根作用域的 `shell.overlay` 列表槽中，展示按 (provider, model) 分组的日汇总。
 
@@ -26,9 +26,9 @@ Status: implemented
 
 ### 独立数据库的 SQLite 存储
 
-存储拥有自己的 SQLite 数据库文件（不与 session-persistence 或 session-query 共享），使用单调递增的 `SCHEMA_VERSION = 1` 和 application id `0x44535455`（'DSTU'）。这种隔离意味着存储的 schema 演进永远不会耦合到会话持久化或其他 SQLite 消费者。
+存储拥有自己的 SQLite 数据库文件（不与 session-persistence 或 session-query 共享），使用单调递增的 `SCHEMA_VERSION = 2` 和 application id `0x44535455`（'DSTU'）。这种隔离意味着存储的 schema 演进永远不会耦合到会话持久化或其他 SQLite 消费者。
 
-`token_usage_events` 表为每个 (session, turn, step) 存储一行，使用 `PRIMARY KEY (session_id, turn, step)` 和 `(date, provider, model)` 索引。`INSERT ... ON CONFLICT DO UPDATE` 模式意味着对同一 (session, turn, step) 的重复追加会替换而非复制——宿主的 session-event 重放语义已经保证了幂等事件交付。
+`token_usage_events` 表为每个 (session, turn, step) 存储一行，使用 `PRIMARY KEY (session_id, turn, step)` 和 `(date, provider, model)` 索引。`INSERT ... ON CONFLICT DO UPDATE` 模式意味着对同一 (session, turn, step) 的重复追加会替换而非复制——宿主的 session-event 重放语义已经保证了幂等事件交付。汇总读取按调用方提交的时区以每条记录精确的 epoch `time` 窗口界定查询（`dailySummary(date, timeZone)`），而非依据写入时的 `date` 键，因此它们无索引地扫描较小的表；在某个部署证明增长需要 `time` 索引之前，这一点被推迟。
 
 ### Session-event 监听器镜像 session-stats 投影计时
 
@@ -77,5 +77,5 @@ inject face 返回 `{ api, t }` —— wire 客户端的 `tokenUsage` 域和绑�
 - Token 消耗可跨会话查询，无需扫描日志。追加时热路径为每次成功的模型调用一个同步 SQLite INSERT。
 - 独立数据库意味着 token-usage 存储可以独立备份、清理或迁移。`tokenUsage.purge(before?)` 方法处理保留策略。
 - 客户端面板通过 `shell.overlay` 组合到每个屏幕，无需拥有布局区域。它按需 fetch，在用户点击 FAB 之前不展示任何内容。
-- 仅 UTC 的日期分桶是已知限制。本地化感知的分桶推迟到部署提出需求时。
+- 按调用方时区的日期分桶：写入方按自身本地时区为每行写入 `date` 键，汇总读取则按调用方提交的 `timeZone` 以每条记录精确的 epoch `time` 窗口重新分桶，因此所请求的自然日无论写入方时区如何都是权威的。这些读取无索引地扫描较小的表，这是已接受的取舍，直到某个部署证明需要进一步增长。
 - 该功能在 profile 层面通过 `token-usage-dashboard` bundle 选择加入。默认的 `dsh web` 组合通过 web-app bundle 的 patch 包含它。

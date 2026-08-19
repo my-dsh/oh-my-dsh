@@ -20,7 +20,8 @@
 `ctx.tokenUsageStore` 暴露三个操作：
 
 - `append(record)` 持久化一条按调用记录的用量。同步且自含失败：它运行在 `session/event` 监听器内部，而 cordis 以 stop-on-throw 方式派发，因此写入失败会被记录并吞掉——绝不传播进 agent loop。
-- `dailySummary(date)` 聚合某一自然日（`YYYY-MM-DD`）的所有已记录调用，按 (provider, model) 分组，并给出跨组合计。
+- `dailySummary(date, timeZone)` 聚合指定时区（UTC 或 IANA 名称）`timeZone` 中某一自然日（`YYYY-MM-DD`）的所有已记录调用，按 (provider, model) 分组，并给出跨组合计；store 以该时区下当日的 epoch `time` 窗口界定查询。
+- `dailySummaryRange(startDate, endDate, timeZone)` 聚合 `timeZone` 中该半开日范围内的所有记录。
 - `purge(before)` 删除 `time` 严格早于 epoch 毫秒截止点的每条记录；返回删除的行数。默认保留策略为无限——store 从不自动过期数据。
 
 ## 按调用记录
@@ -29,7 +30,7 @@
 
 ## 每日汇总
 
-`dailySummary(date)` 返回 `{ date, groups, totals }`。每个分组对四个 token 桶求和、统计 `requests` 与去重 `turns`、对 `llmMs` / `toolMs` 时长求和，并携带 TTFT/decode 合计及其样本计数。`totals` 行是跨组并集（其 `turns` 是各分组去重 turn 数之和，因此可能高估一个横跨多个 provider/model 分组的 turn）。平均值在客户端推导，因此消费方选择加权方式：
+`dailySummary(date, timeZone)` 返回 `{ date, groups, totals }`。每个分组对四个 token 桶求和、统计 `requests` 与去重 `turns`、对 `llmMs` / `toolMs` 时长求和，并携带 TTFT/decode 合计及其样本计数。`totals` 行是跨组并集（其 `turns` 是各分组去重 turn 数之和，因此可能高估一个横跨多个 provider/model 分组的 turn）。平均值在客户端推导，因此消费方选择加权方式：
 
 - **平均吞吐量**（tokens/sec）= `outputTokens / (decodeMs / 1000)`，一种加权均值，能抵抗单个快速小请求的拉偏。
 - **平均 TTFT** = `ttftMs / ttftSamples`，算术平均（每个请求的首 token 等待对用户同等重要）。
@@ -37,7 +38,7 @@
 
 ## Schema 版本
 
-数据库携带自己的单调 `SCHEMA_VERSION`（当前为 2），与 session 持久化 schema 相互独立。空数据库初始化到当前版本；其他任何版本一律拒绝而非就地迁移（预发布立场：后端拒绝旧磁盘格式）。`(date, provider, model)` 索引服务所有每日汇总查询。
+数据库携带自己的单调 `SCHEMA_VERSION`（当前为 2），与 session 持久化 schema 相互独立。空数据库初始化到当前版本；其他任何版本一律拒绝而非就地迁移（预发布立场：后端拒绝旧磁盘格式）。`(date, provider, model)` 索引服务于写入时的 `date` 列；汇总读取以 epoch `time` 窗口界定较小的表并无索引扫描。
 
 ## 模型体验
 
@@ -49,5 +50,5 @@
 
 ## 已知限制与暂缓事项
 
-- **按本地时区按日分桶**——`dayKey` 使用本地时区日期，因此自然日与用户的本地时区一致而非 UTC。这保证仪表盘对任何时区的用户都显示正确的当日数据。
+- **按调用方时区分桶、全表扫描读取**——写入方按自身本地时区为每行写入 `date` 键，汇总读取则按调用方提交的 `timeZone` 以 epoch `time` 窗口重新分桶，而非信任写入的 `date`。这些读取无索引地扫描表；存储的数据量很小，因此在某个部署证明增长需要 `time` 索引之前，接受这一取舍。
 - **无保留策略**——store 从不自动删除；增长由 `purge()` 调用约束。自动每日保留推迟到某个部署提出容量要求后再实现。

@@ -115,15 +115,19 @@ export interface TokenUsageDailySummary {
 }
 
 /**
- * Request payload for the `tokenUsage.dailySummary` RPC: one calendar day.
+ * Request payload for the `tokenUsage.dailySummary` RPC: one calendar day
+ * bucketed in a caller-supplied time zone.
  *
- * The day is a `YYYY-MM-DD` string interpreted in the deployment's
- * aggregation locale (browser-local by default). An absent day is rejected;
- * the client computes today's day in its own locale before calling.
+ * The day is a `YYYY-MM-DD` string and `timeZone` is UTC or an IANA
+ * Area/Location name. The store bounds the day by each record's epoch `time`
+ * in that zone, so a day computed in one zone queries the same calendar day
+ * in the aggregating zone.
  */
 export interface TokenUsageDailySummaryRequest {
   /** Calendar day, `YYYY-MM-DD`. */
   date: string
+  /** UTC or IANA Area/Location name that bounds the requested day. */
+  timeZone: string
 }
 
 /**
@@ -159,19 +163,25 @@ export interface TokenUsageStore {
   append(record: TokenUsageEventRecord): void
   /**
    * Aggregate every recorded call for one calendar day, grouped by
-   * (provider, model), with cross-group totals.
+   * (provider, model), with cross-group totals. The day is bucketed in the
+   * caller's time zone via each record's exact epoch `time`, not the
+   * append-time `date` key, so the requested calendar day is authoritative
+   * regardless of the writer's zone.
    * @param date - calendar day `YYYY-MM-DD`.
+   * @param timeZone - UTC or IANA Area/Location name used to bound the day.
    * @returns the daily summary; an empty `groups` array when no records exist for the day.
    */
-  dailySummary(date: string): TokenUsageDailySummary
+  dailySummary(date: string, timeZone: string): TokenUsageDailySummary
   /**
    * Aggregate every recorded call across a closed date range, grouped by
-   * (provider, model), with cross-group totals.
+   * (provider, model), with cross-group totals. Both boundaries are bucketed
+   * in the caller's time zone via each record's exact epoch `time`.
    * @param startDate - inclusive start calendar day `YYYY-MM-DD`.
    * @param endDate - inclusive end calendar day `YYYY-MM-DD`.
+   * @param timeZone - UTC or IANA Area/Location name used to bound the range.
    * @returns the range summary; an empty `groups` array when no records exist in the range.
    */
-  dailySummaryRange(startDate: string, endDate: string): TokenUsageDailySummary
+  dailySummaryRange(startDate: string, endDate: string, timeZone: string): TokenUsageDailySummary
   /**
    * Drop every record whose `time` is strictly before `before`.
    * @param before - epoch milliseconds cutoff.

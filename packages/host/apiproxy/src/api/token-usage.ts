@@ -40,19 +40,24 @@ export interface TokenUsageDailySummaryView {
 export interface TokenUsageApi {
   /**
    * Aggregate every recorded provider call for one calendar day, grouped by
-   * (provider, model), with cross-group totals and derived averages.
-   * @param request - the day to aggregate (`YYYY-MM-DD`).
+   * (provider, model), with cross-group totals and derived averages. The day
+   * is bounded in the caller's time zone by each record's epoch `time`, so
+   * the calendar day the browser displays is authoritative.
+   * @param request - the day (`YYYY-MM-DD`) and the UTC/IANA zone bounding it.
    * @returns the daily summary; empty `groups` when no records exist for the day.
    */
-  dailySummary(request: RpcRequest<{ date: string }>): Promise<RpcResponse<TokenUsageDailySummaryView>>
+  dailySummary(request: RpcRequest<{ date: string; timeZone: string }>): Promise<RpcResponse<TokenUsageDailySummaryView>>
 
   /**
    * Aggregate every recorded provider call across a closed date range,
-   * grouped by (provider, model), with cross-group totals and derived averages.
-   * @param request - the inclusive start and end calendar days (`YYYY-MM-DD`).
+   * grouped by (provider, model), with cross-group totals and derived
+   * averages. Both boundaries are bounded in the caller's time zone.
+   * @param request - the inclusive start and end calendar days (`YYYY-MM-DD`) and the UTC/IANA zone bounding them.
    * @returns the range summary; empty `groups` when no records exist in the range.
    */
-  dailySummaryRange(request: RpcRequest<{ startDate: string; endDate: string }>): Promise<RpcResponse<TokenUsageDailySummaryView>>
+  dailySummaryRange(
+    request: RpcRequest<{ startDate: string; endDate: string; timeZone: string }>,
+  ): Promise<RpcResponse<TokenUsageDailySummaryView>>
 
   /**
    * Drop every record whose `time` is strictly before the cutoff.

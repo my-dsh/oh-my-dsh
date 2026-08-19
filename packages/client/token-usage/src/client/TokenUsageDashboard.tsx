@@ -8,9 +8,10 @@
  * component-local per the slot-system live-data discipline.
  *
  * Data reaches the component through the inject face only (`api`, `t`); no
- * ctx, no subscription machinery. The host store buckets by the server's
- * local timezone, so the panel sends the day it wants aggregated rather
- * than re-bucketing client-side.
+ * ctx, no subscription machinery. The host store bounds each day by a caller
+ * time zone, so the panel sends both the day it wants aggregated and the
+ * browser zone that derived it (`browserTimeZone`); the host then buckets by
+ * that same zone.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -22,8 +23,10 @@ import type {
 import { Button, IconDataOutline16, IconRefreshOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TokenUsageDashboardInjected } from './slots.ts'
 import {
-  daysAgoLocalKey, endOfLastMonthLocalKey, formatCacheHit, formatDuration, formatThroughput, formatTtft, formatTtftSeconds, formatTokens,
-  orderedGroups, startOfLastMonthLocalKey, startOfMonth, startOfMonthLocalKey, todayLocalKey, yesterdayLocalKey,
+  browserTimeZone, daysAgoLocalKey, endOfLastMonthLocalKey, formatCacheHit,
+  formatDuration, formatThroughput, formatTtft, formatTtftSeconds, formatTokens,
+  orderedGroups, startOfLastMonthLocalKey, startOfMonth, startOfMonthLocalKey,
+  todayLocalKey, yesterdayLocalKey,
 } from './format.ts'
 import type { DashboardKey } from './locales.ts'
 import css from './TokenUsageDashboard.module.css'
@@ -58,13 +61,15 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
     setError(null)
     try {
       let response
+      const timeZone = browserTimeZone()
       if (options.mode === 'range' && options.startDate && options.endDate) {
         response = await api.tokenUsage.dailySummaryRange({
           startDate: options.startDate,
           endDate: options.endDate,
+          timeZone,
         })
       } else {
-        response = await api.tokenUsage.dailySummary({ date: options.date ?? todayLocalKey() })
+        response = await api.tokenUsage.dailySummary({ date: options.date ?? todayLocalKey(), timeZone })
       }
       if (!response.result.ok) {
         setStatus('error')

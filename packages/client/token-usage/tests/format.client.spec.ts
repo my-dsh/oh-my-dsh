@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { TokenUsageDailySummaryView, TokenUsageGroupView } from '@deepseek-ai/dsh-api-remotes/client'
 import {
+  browserTimeZone,
   daysAgoLocalKey,
   endOfLastMonthLocalKey,
   endOfMonth,
@@ -101,6 +102,13 @@ describe('token-usage format helpers', () => {
   it('produces a YYYY-MM-DD local day key for the current instant', () => {
     expect(todayLocalKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(yesterdayLocalKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('resolves the browser zone as canonical UTC or IANA Area/Location', () => {
+    const zone = browserTimeZone()
+    expect(typeof zone).toBe('string')
+    expect(zone.length).toBeGreaterThan(0)
+    expect(zone).toMatch(/^(UTC|[A-Za-z][A-Za-z0-9_+.-]*(?:\/[A-Za-z0-9_+.-]+)+)$/)
   })
 
   it('steps back the requested number of calendar days, crossing month and year boundaries', () => {

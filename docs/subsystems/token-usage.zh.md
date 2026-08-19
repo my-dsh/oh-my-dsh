@@ -149,20 +149,26 @@ append(record: TokenUsageEventRecord): void
 
 /**
  * Aggregate every recorded call for one calendar day, grouped by
- * (provider, model), with cross-group totals.
+ * (provider, model), with cross-group totals. The day is bucketed in the
+ * caller's time zone via each record's exact epoch `time`, not the
+ * append-time `date` key, so the requested calendar day is authoritative
+ * regardless of the writer's zone.
  * @param date - calendar day `YYYY-MM-DD`.
+ * @param timeZone - UTC or IANA Area/Location name used to bound the day.
  * @returns the daily summary; an empty `groups` array when no records exist for the day.
  */
-dailySummary(date: string): TokenUsageDailySummary
+dailySummary(date: string, timeZone: string): TokenUsageDailySummary
 
 /**
  * Aggregate every recorded call across a closed date range, grouped by
- * (provider, model), with cross-group totals.
+ * (provider, model), with cross-group totals. Both boundaries are bucketed
+ * in the caller's time zone via each record's exact epoch `time`.
  * @param startDate - inclusive start calendar day `YYYY-MM-DD`.
  * @param endDate - inclusive end calendar day `YYYY-MM-DD`.
+ * @param timeZone - UTC or IANA Area/Location name used to bound the range.
  * @returns the range summary; an empty `groups` array when no records exist in the range.
  */
-dailySummaryRange(startDate: string, endDate: string): TokenUsageDailySummary
+dailySummaryRange(startDate: string, endDate: string, timeZone: string): TokenUsageDailySummary
 
 /**
  * Drop every record whose `time` is strictly before `before`.
@@ -172,5 +178,5 @@ dailySummaryRange(startDate: string, endDate: string): TokenUsageDailySummary
 purge(before: number): number
 ```
 
-Source: [`packages/session/token-usage/src/types.ts:153`](../../packages/session/token-usage/src/types.ts)
+Source: [`packages/session/token-usage/src/types.ts:157`](../../packages/session/token-usage/src/types.ts)
 <!-- END GENERATED cordis-surface -->

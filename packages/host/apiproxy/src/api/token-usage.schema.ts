@@ -11,15 +11,40 @@ import type { RequestPayload, ResponseValue } from '../api/rpc-map.ts'
 /** YYYY-MM-DD day string. */
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
+/** UTC or IANA Area/Location time-zone selector. */
+const IANA_TIME_ZONE = /^[A-Za-z][A-Za-z0-9_+.-]*(?:\/[A-Za-z0-9_+.-]+)+$/
+
+/**
+ * A UTC or IANA Area/Location time-zone selector that resolves in this
+ * runtime (rejects aliases and unsupported names, like the request-context
+ * browser-zone boundary).
+ */
+const timeZoneSchema = z
+  .string()
+  .refine(value => value === 'UTC' || IANA_TIME_ZONE.test(value), {
+    message: 'timeZone must be UTC or an IANA Area/Location name',
+  })
+  .refine((value) => {
+    try {
+      return new Intl.DateTimeFormat('en-US', { timeZone: value }).resolvedOptions().timeZone === value
+    } catch {
+      return false
+    }
+  }, {
+    message: 'timeZone must resolve to a canonical UTC or IANA Area/Location name',
+  })
+
 /** tokenUsage.dailySummary request payload. */
 export const tokenUsageDailySummaryRequestSchema = z.object({
   date: z.string().regex(DAY_PATTERN, 'date must be YYYY-MM-DD'),
+  timeZone: timeZoneSchema,
 }) satisfies z.ZodType<Wire<RequestPayload<'tokenUsage.dailySummary'>>>
 
 /** tokenUsage.dailySummaryRange request payload. */
 export const tokenUsageDailySummaryRangeRequestSchema = z.object({
   startDate: z.string().regex(DAY_PATTERN, 'startDate must be YYYY-MM-DD'),
   endDate: z.string().regex(DAY_PATTERN, 'endDate must be YYYY-MM-DD'),
+  timeZone: timeZoneSchema,
 }) satisfies z.ZodType<Wire<RequestPayload<'tokenUsage.dailySummaryRange'>>>
 
 /** One (provider, model) group row of the daily-summary response. */

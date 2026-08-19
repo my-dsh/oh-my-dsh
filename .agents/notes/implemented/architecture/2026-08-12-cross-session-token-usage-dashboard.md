@@ -18,7 +18,7 @@ The feature splits into three packages, each following the repo's capability-sea
 
 1. **Host plugin** (`@deepseek-ai/dsh-token-usage`, `packages/session/token-usage/`) — the Service Definition (`TokenUsageStore`) plus its independent SQLite provider and a `session/event` listener that appends one per-request usage record. This is the durable fact source.
 
-2. **Centralized RPC transport extension** (`packages/host/apiproxy/`) — two new unary methods (`tokenUsage.dailySummary` and `tokenUsage.purge`) added to the existing apiproxy layer, following the documented extension point: one new file pair + one field on `ApiProxy` + one map row.
+2. **Centralized RPC transport extension** (`packages/host/apiproxy/`) — three unary methods (`tokenUsage.dailySummary`, `tokenUsage.dailySummaryRange`, and `tokenUsage.purge`) added to the existing apiproxy layer, following the documented extension point: one new file pair + one field on `ApiProxy` + one map row.
 
 3. **Client plugin** (`@deepseek-ai/dsh-client-token-usage`, `packages/client/token-usage/`) — a floating action button (FAB) and modal panel contributed to the root-scoped `shell.overlay` list slot, showing the daily summary grouped by (provider, model).
 
@@ -26,9 +26,9 @@ The feature splits into three packages, each following the repo's capability-sea
 
 ### SQLite store with independent database
 
-The store owns its own SQLite database file (not shared with session-persistence or session-query), with a monotonic `SCHEMA_VERSION = 1` and application id `0x44535455` ('DSTU'). This isolation means the store's schema evolution never couples to session persistence or any other SQLite consumer.
+The store owns its own SQLite database file (not shared with session-persistence or session-query), with a monotonic `SCHEMA_VERSION = 2` and application id `0x44535455` ('DSTU'). This isolation means the store's schema evolution never couples to session persistence or any other SQLite consumer.
 
-The `token_usage_events` table stores one row per (session, turn, step) with a `PRIMARY KEY (session_id, turn, step)` and an index on `(date, provider, model)`. The `INSERT ... ON CONFLICT DO UPDATE` pattern means re-appending a record for the same (session, turn, step) replaces rather than duplicates — the host's session-event replay semantics already guarantee idempotent event delivery.
+The `token_usage_events` table stores one row per (session, turn, step) with a `PRIMARY KEY (session_id, turn, step)` and an index on `(date, provider, model)`. The `INSERT ... ON CONFLICT DO UPDATE` pattern means re-appending a record for the same (session, turn, step) replaces rather than duplicates — the host's session-event replay semantics already guarantee idempotent event delivery. Summary reads bound the query by each record's exact epoch `time` window in the caller-supplied time zone (`dailySummary(date, timeZone)`) rather than by the append-time `date` key, so they scan the small table without using the `date` index; a `time` index is deferred until a deployment demonstrates growth that warrants it.
 
 ### Session-event listener mirrors session-stats projection timing
 
@@ -77,5 +77,5 @@ The connection fixture (`fixture.ts`) returns a fixed two-group daily summary (d
 - Token consumption is queryable cross-session without scanning logs. The append-time hot path costs one synchronous SQLite insert per successful model call.
 - The independent database means the token-usage store can be backed up, purged, or moved independently. The `tokenUsage.purge(before?)` method handles retention.
 - The client panel composes into every screen via `shell.overlay` without owning a layout region. It fetches on demand and shows nothing until the user clicks the FAB.
-- The UTC-only day bucketing is a known limitation. Locale-aware bucketing is deferred until a deployment states a requirement.
+- Day bucketing follows the caller's time zone: the writer keys each row's `date` in its own local zone, and summary reads re-bucket by the caller-supplied `timeZone` through each record's exact epoch `time` window, so the requested calendar day is authoritative regardless of the writer's zone. These reads scan the small table without an index, an accepted tradeoff until a deployment demonstrates growth.
 - The feature is opt-in at the profile level via the `token-usage-dashboard` bundle. The default `dsh web` composition includes it via the web-app bundle's patch.

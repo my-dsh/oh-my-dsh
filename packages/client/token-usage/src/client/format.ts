@@ -113,6 +113,20 @@ export function todayLocalKey(): string {
 }
 
 /**
+ * The browser's current canonical IANA time zone, sent to the host so the
+ * store binds the requested calendar day by the same zone the browser used
+ * to derive its date keys.
+ * @returns the canonical UTC or IANA Area/Location zone for the current instant.
+ */
+export function browserTimeZone(): string {
+  const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone
+  if (typeof timeZone !== 'string' || timeZone.length === 0) {
+    throw new Error('browser time zone is unavailable')
+  }
+  return timeZone
+}
+
+/**
  * The local day key for the instant `days` days before today. Pass `0` to
  * get today, `1` for yesterday. Calendar math (not a fixed offset) keeps it
  * correct across month and year boundaries.

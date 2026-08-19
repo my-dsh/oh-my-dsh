@@ -20,7 +20,8 @@ The `sqlite-provider` entry opens (or creates) the database and registers one `S
 `ctx.tokenUsageStore` exposes three operations:
 
 - `append(record)` persists one per-call record. Synchronous and fail-contained: it runs inside the `session/event` listener, which cordis dispatches stop-on-throw, so a write failure is logged and swallowed — never propagated into the agent loop.
-- `dailySummary(date)` aggregates every recorded call for one calendar day (`YYYY-MM-DD`), grouped by (provider, model), with cross-group totals.
+- `dailySummary(date, timeZone)` aggregates every recorded call for one calendar day (`YYYY-MM-DD` in `timeZone`, a UTC or IANA name), grouped by (provider, model), with cross-group totals; the store bounds the query by the day's epoch `time` window in that zone.
+- `dailySummaryRange(startDate, endDate, timeZone)` aggregates every record across the half-open day range in `timeZone`.
 - `purge(before)` drops every record whose `time` is strictly before the epoch-millisecond cutoff; returns the number of rows deleted. Default retention is unlimited — the store never auto-expires data.
 
 ## The per-call record
@@ -29,7 +30,7 @@ One row per (session, turn, step): `time`, `date`, `sessionId`, `provider`, `mod
 
 ## The daily summary
 
-`dailySummary(date)` returns `{ date, groups, totals }`. Each group sums the four token buckets, counts `requests` and distinct `turns`, sums the `llmMs` / `toolMs` durations, and carries the TTFT/decode totals plus their sample counts. The `totals` row is the cross-group union (its `turns` is the union of each group's distinct-turn sums, so it may over-count an individual turn that spans more than one provider/model group). Averages are derived client-side so the consumer chooses weighting:
+`dailySummary(date, timeZone)` returns `{ date, groups, totals }`. Each group sums the four token buckets, counts `requests` and distinct `turns`, sums the `llmMs` / `toolMs` durations, and carries the TTFT/decode totals plus their sample counts. The `totals` row is the cross-group union (its `turns` is the union of each group's distinct-turn sums, so it may over-count an individual turn that spans more than one provider/model group). Averages are derived client-side so the consumer chooses weighting:
 
 - **Average throughput** (tokens/sec) = `outputTokens / (decodeMs / 1000)`, a weighted mean that resists being skewed by a single fast small request.
 - **Average TTFT** = `ttftMs / ttftSamples`, an arithmetic mean (each request's first-token wait is equally significant to the user).
@@ -37,7 +38,7 @@ One row per (session, turn, step): `time`, `date`, `sessionId`, `provider`, `mod
 
 ## Schema versioning
 
-The database carries its own monotonic `SCHEMA_VERSION` (currently 2), independent of the session-persistence schema. An empty database initializes at the current version; every other version rejects rather than migrating in place (pre-release stance: backends reject old on-disk formats). The `(date, provider, model)` index serves every daily-summary query.
+The database carries its own monotonic `SCHEMA_VERSION` (currently 2), independent of the session-persistence schema. An empty database initializes at the current version; every other version rejects rather than migrating in place (pre-release stance: backends reject old on-disk formats). The `(date, provider, model)` index serves the append-time `date` column; summary reads bound a small table by the epoch `time` window and scan it without an index.
 
 ## Model Experience
 
@@ -49,5 +50,5 @@ None; this package neither assembles nor sends a provider request.
 
 ## Known Limitations and Deferred Work
 
-- **Local timezone day bucketing** — `dayKey` uses local timezone dates, so the calendar day matches the user's local timezone rather than UTC. This ensures that the dashboard shows the correct day's data for users in all timezones.
+- **Bucket by caller time zone, full-scan read** — the writer keys each row's `date` in its own local time zone, and summary reads re-bucket by the caller-supplied `timeZone` through an epoch `time` window rather than trusting the appended `date`. Those reads scan the table without an index; the stored data volume is small, so the tradeoff is accepted until a deployment demonstrates growth that warrants a `time` index.
 - **No retention policy** — the store never auto-deletes; growth is bounded by `purge()` calls. Automatic daily retention is deferred until a deployment states a volume requirement.
