@@ -450,6 +450,21 @@
       "source": "packages/llm/token-meter/src/types.ts"
     },
     {
+      "doc": "docs/subsystems/token-usage.md",
+      "symbol": "TokenUsageEventRecord",
+      "source": "packages/session/token-usage/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/token-usage.md",
+      "symbol": "TokenUsageDailyGroup",
+      "source": "packages/session/token-usage/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/token-usage.md",
+      "symbol": "TokenUsageDailySummary",
+      "source": "packages/session/token-usage/src/types.ts"
+    },
+    {
       "doc": "docs/subsystems/session.md",
       "symbol": "UserMessage",
       "source": "packages/llm/llm/src/message.ts"

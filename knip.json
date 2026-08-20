@@ -744,31 +744,12 @@
         "@deepseek-ai/dsh-code-runtime-worker-thread"
       ]
     },
-    "packages/bundle/acp-app": {
-      "ignoreDependencies": [
-        "@deepseek-ai/dsh-acp"
-      ]
-    },
-    "packages/bundle/sdk-app": {
-      "ignoreDependencies": [
-        "@deepseek-ai/dsh-sdk-jsonrpc-server"
-      ]
-    },
-    "packages/bundle/sdk-minimal": {
+    "packages/bundle/token-usage-dashboard": {
       "ignoreDependencies": [
         "@deepseek-ai/.+"
-      ]
-    },
-    "packages/experimental/agent-team": {
-      "entry": [
-        "tests/**/*.spec.ts",
-        "tests/**/*.e2e.ts"
-      ]
-    },
-    "packages/experimental/agent-team-web-profile": {
-      "ignoreDependencies": [
-        "@deepseek-ai/dsh-experimental-client-ui-agent-team"
-      ]
+      ],
+      "entry": [],
+      "project": []
     },
     "packages/bundle/web-app": {
       "ignoreDependencies": [

@@ -134,6 +134,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Owns isolated per-session replay folds; pressure consumers share immutable revisioned measurements.',
   },
   {
+    key: 'tokenUsageStore',
+    pkg: 'token-usage',
+    title: 'Cross-session token-usage persistence',
+    mode: 'core',
+    consumers: ['apiproxy'],
+    note: 'Persists per-request usage records to SQLite and aggregates daily per-(provider, model) summaries for the web dashboard.',
+  },
+  {
     key: 'toolResultPruner',
     pkg: 'compaction-tool-result-pruner',
     title: 'Model-free tool-result pruning',
