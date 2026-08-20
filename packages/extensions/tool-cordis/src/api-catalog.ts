@@ -2490,15 +2490,15 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'record', description: 'the per-request record; owned by the store after the call.' }],
       },
       {
-        signature: 'dailySummary(date: string): TokenUsageDailySummary',
-        description: 'Aggregate every recorded call for one calendar day, grouped by (provider, model), with cross-group totals.',
-        parameters: [{ name: 'date', description: 'calendar day `YYYY-MM-DD`.' }],
+        signature: 'dailySummary(date: string, timeZone: string): TokenUsageDailySummary',
+        description: 'Aggregate every recorded call for one calendar day, grouped by (provider, model), with cross-group totals. The day is bucketed in the caller\'s time zone via each record\'s exact epoch `time`, not the append-time `date` key, so the requested calendar day is authoritative regardless of the writer\'s zone.',
+        parameters: [{ name: 'date', description: 'calendar day `YYYY-MM-DD`.' }, { name: 'timeZone', description: 'UTC or IANA Area/Location name used to bound the day.' }],
         returns: 'the daily summary; an empty `groups` array when no records exist for the day.',
       },
       {
-        signature: 'dailySummaryRange(startDate: string, endDate: string): TokenUsageDailySummary',
-        description: 'Aggregate every recorded call across a closed date range, grouped by (provider, model), with cross-group totals.',
-        parameters: [{ name: 'startDate', description: 'inclusive start calendar day `YYYY-MM-DD`.' }, { name: 'endDate', description: 'inclusive end calendar day `YYYY-MM-DD`.' }],
+        signature: 'dailySummaryRange(startDate: string, endDate: string, timeZone: string): TokenUsageDailySummary',
+        description: 'Aggregate every recorded call across a closed date range, grouped by (provider, model), with cross-group totals. Both boundaries are bucketed in the caller\'s time zone via each record\'s exact epoch `time`.',
+        parameters: [{ name: 'startDate', description: 'inclusive start calendar day `YYYY-MM-DD`.' }, { name: 'endDate', description: 'inclusive end calendar day `YYYY-MM-DD`.' }, { name: 'timeZone', description: 'UTC or IANA Area/Location name used to bound the range.' }],
         returns: 'the range summary; an empty `groups` array when no records exist in the range.',
       },
       {
