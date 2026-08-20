@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-18-defer-token-usage-write-to-step-end.md
+2026-08-18-defer-token-usage-write-to-step-end.md: 3eab6a1853801617d40d3a2baf342d8110daea50
+2026-08-18-defer-token-usage-write-to-step-end.zh.md: 9fea1d90c47afbeb73b6c90eea061829e2788aa2

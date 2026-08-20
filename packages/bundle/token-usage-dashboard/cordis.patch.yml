@@ -1,0 +1,29 @@
+# The dsh-token-usage-dashboard bundle patch: inserts the front- and back-end
+# of the Token consumption dashboard over any web-surface profile. Three rows:
+#   - token-usage-sqlite: the independent SQLite provider for the
+#     TokenUsageStore Service Definition (opens its own database file).
+#   - token-usage: the session/event listener that appends one per-request
+#     usage record (provider, model, token buckets, TTFT, decode timing) and
+#     serves the daily aggregation to the wire `tokenUsage` domain.
+#   - ui-token-usage: the browser panel (`dsh.client` row) registering the
+#     floating-button dashboard into shell.overlay.
+# The listener injects `tokenUsageStore`, so it activates only after the
+# provider mounts; order in this list is informational. The browser panel needs
+# the web surface already present (client runtime, connection, ui-layout), so
+# this bundle composes over a web-surface profile and must not mount alongside
+# `@deepseek-ai/dsh-web-app`, which already includes these three rows.
+
+- insert:
+    - id: token-usage-sqlite
+      name: '@deepseek-ai/dsh-token-usage/sqlite-provider'
+      config:
+        # Default location mirrors the host persistence root; a deployment
+        # overrides `path` to place the database where it manages retention.
+        path: !!js dshHomePath('token-usage.sqlite')
+
+    - id: token-usage
+      name: '@deepseek-ai/dsh-token-usage'
+      inject: [tokenUsageStore]
+
+    - id: ui-token-usage
+      name: '@deepseek-ai/dsh-client-token-usage'
