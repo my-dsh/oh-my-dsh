@@ -3,7 +3,8 @@
 // deferred-controlled timing). Streams are hand pumps: pushMux/pushHost.
 import type {
   HostFrame, IApiClient, ModelSelection, MuxFrame,
-  RpcRequest, RpcResponse, SessionId, SessionModels, SessionSearchItem, SkillEntry, WorkspaceId,
+  RpcRequest, RpcResponse, SessionId, SessionModels, SessionSearchItem, SkillEntry, TokenUsageDailySummaryView,
+  WorkspaceId,
 } from '../src/client/api.ts'
 import { RpcId } from '../src/client/api.ts'
 
@@ -28,6 +29,21 @@ let nextRpc = 0
 
 export function ok<T>(value: T): RpcResponse<T> {
   return { rpcId: RpcId(`fake-${nextRpc++}`), result: { ok: true, value } }
+}
+
+/** Empty daily-summary view: no per-group rows and an all-zero totals row. */
+function emptyTokenUsageSummary(date: string): TokenUsageDailySummaryView {
+  return {
+    date,
+    groups: [],
+    totals: {
+      provider: 'total', model: 'total',
+      requests: 0, turns: 0, llmMs: 0, toolMs: 0,
+      uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
+      ttftMs: 0, ttftSamples: 0, decodeMs: 0,
+      averageThroughput: null, averageTtftMs: null, averageLlmMs: null, cacheHitRatio: null,
+    },
+  }
 }
 
 
@@ -223,6 +239,15 @@ export class FakeApiClient implements IApiClient {
     providers: payload => this.record('llm.providers', payload, Promise.resolve(ok({ providers: [] }))),
     models: payload => this.record('llm.models', payload, Promise.resolve(ok({ groups: [], failures: [] }))),
     discoverModels: payload => this.record('llm.discoverModels', payload, Promise.resolve(ok({ models: [] }))),
+  }
+
+  readonly tokenUsage: IApiClient['tokenUsage'] = {
+    dailySummary: (payload: unknown) =>
+      this.record('tokenUsage.dailySummary', payload, Promise.resolve(ok(emptyTokenUsageSummary('')))),
+    dailySummaryRange: (payload: unknown) =>
+      this.record('tokenUsage.dailySummaryRange', payload, Promise.resolve(ok(emptyTokenUsageSummary('')))),
+    purge: (payload: unknown) =>
+      this.record('tokenUsage.purge', payload, Promise.resolve(ok({ deleted: 0 }))),
   }
 
   /** When true, streams never fire onOpen (misbehaving-carrier material for the handshake timeout guard). */

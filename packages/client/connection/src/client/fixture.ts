@@ -35,6 +35,7 @@ import type {
   ApiProxy, ClientRequest, ClientResponse, HistoryEntry, HostFrame, MuxFrame, RpcReceipt,
   ModelProviderGroup, ModelSelection, RpcRequest, RpcResponse, RpcResult, ServerRequest, ServerResponse, SessionSummary,
   ToolCallView, ToolEventView, ToolResultView, WorkspaceId, WorkspaceView,
+  TokenUsageDailySummaryView,
 } from './api.ts'
 import type { RequestPayload, ResponseValue, RpcMethodMap } from '@deepseek-ai/dsh-host-apiproxy/api'
 import { AbstractApiClient, RpcId, SESSION_SEARCH_RESULT_LIMIT } from './api.ts'
@@ -1672,6 +1673,21 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
     return Promise.resolve({ rpcId: request.rpcId, result: { ok: false, error } })
   }
 
+  /** Empty daily-summary view: no per-group rows and an all-zero totals row. */
+  function emptyTokenUsageSummary(date: string): TokenUsageDailySummaryView {
+    return {
+      date,
+      groups: [],
+      totals: {
+        provider: 'total', model: 'total',
+        requests: 0, turns: 0, llmMs: 0, toolMs: 0,
+        uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
+        ttftMs: 0, ttftSamples: 0, decodeMs: 0,
+        averageThroughput: null, averageTtftMs: null, averageLlmMs: null, cacheHitRatio: null,
+      },
+    }
+  }
+
   const summaryOf = (id: SessionId): SessionSummary | undefined => sessions.find(s => s.sessionId === id)
   /** Shared session guard for sessionId-addressed catalog routes: the error
    *  response when the session is unknown, undefined when it exists. */
@@ -3087,6 +3103,11 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
     downloads: {
       sessionLog: () => Promise.resolve(new Response('fixture mode does not serve session export', { status: 404 })),
     },
+    tokenUsage: {
+      dailySummary: request => ok(request, emptyTokenUsageSummary(request.payload.date)),
+      dailySummaryRange: request => ok(request, emptyTokenUsageSummary(request.payload.startDate)),
+      purge: request => ok(request, { deleted: 0 }),
+    },
   }
 
   const rpc: ClientConnectionRpc = {
@@ -3227,6 +3248,9 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'llm.providers': return this.api.llm.providers(request)
       case 'llm.models': return this.api.llm.models(request)
       case 'llm.discoverModels': return this.api.llm.discoverModels(request, signal)
+      case 'tokenUsage.dailySummary': return this.api.tokenUsage.dailySummary(request)
+      case 'tokenUsage.dailySummaryRange': return this.api.tokenUsage.dailySummaryRange(request)
+      case 'tokenUsage.purge': return this.api.tokenUsage.purge(request)
     }
   }
 

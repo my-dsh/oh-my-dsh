@@ -54,7 +54,7 @@ inject face 返回 `{ api, t }` —— wire 客户端的 `tokenUsage` 域和绑�
 
 ### 开发与测试用的 fixture 数据
 
-连接 fixture（`fixture.ts`）返回一个固定的双分组日汇总（deepseek-chat + deepseek-reasoner），带计算好的合计，使仪表盘在 dev 模式和 fixture 驱动的测试中无需运行宿主即可渲染已填充的表格。
+连接 fixture（`fixture.ts`）的三个 `tokenUsage` 方法返回空的日汇总（无分组行、全零合计行），使仪表盘在 dev 模式和 fixture 驱动的测试中无需运行宿主即可渲染空表格。fixture 的 `FixtureApiClient.dispatch` switch 将 `tokenUsage.*` 路由到内存中的 `ApiProxy` 桩。
 
 ## 测试
 
@@ -62,7 +62,8 @@ inject face 返回 `{ api, t }` —— wire 客户端的 `tokenUsage` 域和绑�
 - **客户端格式单元测试**（`packages/client/token-usage/tests/format.client.spec.ts`）：覆盖所有格式化辅助函数（token 计数、吞吐量、TTFT、缓存命中率、排序、今日 UTC key）作为纯函数。
 - **Typecheck 聚合**：`tsconfig.host.json` 和 `tsconfig.client.json` 均以 0 error 通过。
 - **Lint**：oxlint 在所有新增和修改文件上以 0 warning 0 error 通过。
-- **Fixture FakeApiClient 桩**：`connection/tests/fake-api.client.ts` 和 `runtime/tests/fake-api.client.ts` 均已更新 `tokenUsage` 成员；两个 apiproxy 测试 fixture 也已更新。
+- **Fixture FakeApiClient 桩**：`connection/tests/fake-api.client.ts` 和 `runtime/tests/fake-api.client.ts` 均带有返回空汇总的 `tokenUsage` 成员；两个 apiproxy 测试 fixture（`client-handler.spec.ts`、`fetch-carrier.spec.ts`）编程该域。
+- **客户端类型 re-export 链**：`TokenUsageDailySummaryView` 和 `TokenUsageGroupView` 经 `@deepseek-ai/dsh-host-apiproxy/api` → `dsh-client-connection/src/client/api.ts` → `dsh-client-connection/client` → `@deepseek-ai/dsh-api-remotes/client` re-export，使客户端插件只命名一个聚合包而无需导入宿主包。
 
 ## 考虑过的替代方案
 

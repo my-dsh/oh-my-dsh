@@ -4,6 +4,7 @@
 import type {
   ClientResponse, HostFrame, IApiClient, ModelSelection, MuxFrame,
   RpcError, RpcReceipt, RpcRequest, RpcResponse, SessionId, SessionModels, SessionSearchItem, SkillEntry,
+  TokenUsageDailySummaryView,
   WorkspaceId, WorkspaceView,
 } from '@deepseek-ai/dsh-api-remotes/client'
 import { RpcId } from '@deepseek-ai/dsh-client-connection/client'
@@ -19,6 +20,21 @@ function fakeWorkspace(id: string, over: Partial<WorkspaceView> = {}): Workspace
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...over,
+  }
+}
+
+/** Empty daily-summary view: no per-group rows and an all-zero totals row. */
+function emptyTokenUsageSummary(date: string): TokenUsageDailySummaryView {
+  return {
+    date,
+    groups: [],
+    totals: {
+      provider: 'total', model: 'total',
+      requests: 0, turns: 0, llmMs: 0, toolMs: 0,
+      uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
+      ttftMs: 0, ttftSamples: 0, decodeMs: 0,
+      averageThroughput: null, averageTtftMs: null, averageLlmMs: null, cacheHitRatio: null,
+    },
   }
 }
 
@@ -276,6 +292,15 @@ export class FakeApiClient implements IApiClient {
     providers: payload => this.record('llm.providers', payload, Promise.resolve(ok({ providers: [] }))),
     models: payload => this.record('llm.models', payload, Promise.resolve(ok({ groups: [], failures: [] }))),
     discoverModels: payload => this.record('llm.discoverModels', payload, Promise.resolve(ok({ models: [] }))),
+  }
+
+  readonly tokenUsage: IApiClient['tokenUsage'] = {
+    dailySummary: (payload: unknown) =>
+      this.record('tokenUsage.dailySummary', payload, Promise.resolve(ok(emptyTokenUsageSummary('')))),
+    dailySummaryRange: (payload: unknown) =>
+      this.record('tokenUsage.dailySummaryRange', payload, Promise.resolve(ok(emptyTokenUsageSummary('')))),
+    purge: (payload: unknown) =>
+      this.record('tokenUsage.purge', payload, Promise.resolve(ok({ deleted: 0 }))),
   }
 
   /** When true, streams never fire onOpen (misbehaving-carrier material for the handshake timeout guard). */
