@@ -285,7 +285,7 @@ function KpiCards({
         <div className={css.kpiCard}>
           <span className={css.kpiLabel}>{t?.('kpi.llm') ?? 'Avg time'}</span>
           <span className={css.kpiValue}>{formatDuration(totals.averageLlmMs)}</span>
-          <span className={css.kpiHint}>{t?.('kpi.firstToken') ?? 'First token latency'}</span>
+          <span className={css.kpiHint}>{t?.('kpi.llmHint') ?? 'Avg LLM step time'}</span>
         </div>
       </div>
     </section>
