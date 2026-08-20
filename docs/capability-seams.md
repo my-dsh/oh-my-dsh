@@ -25,6 +25,9 @@ flowchart LR
   pkg_plugin_package_inventory_deepseek["plugin-package-inventory-deepseek"]
   pkg_token_meter["token-meter"]
   svc_tokenMeter["ctx.tokenMeter<br/>Replay token measurement"]
+  pkg_token_usage["token-usage"]
+  svc_tokenUsageStore["ctx.tokenUsageStore<br/>Cross-session token-usage persistence"]
+  pkg_apiproxy["apiproxy"]
   pkg_compaction_tool_result_pruner["compaction-tool-result-pruner"]
   svc_toolResultPruner["ctx.toolResultPruner<br/>Model-free tool-result pruning"]
   pkg_session["session"]
@@ -321,6 +324,7 @@ flowchart LR
   pkg_terminal_bash --> svc_terminals
   pkg_token_meter --> svc_tokenMeter
   pkg_tool_subagent --> svc_subagentModelSelection
+  pkg_token_usage --> svc_tokenUsageStore
   pkg_tools --> svc_tools
   pkg_typert_registry --> svc_typert
   pkg_user_approval --> svc_approval
@@ -437,6 +441,7 @@ flowchart LR
   svc_systemPrompt --> pkg_tools
   svc_terminals --> pkg_tool_terminal
   svc_tokenMeter --> pkg_compaction_basic
+  svc_tokenUsageStore --> pkg_apiproxy
   svc_toolResultPruner --> pkg_compaction_basic
   svc_tools --> pkg_agent_loop
   svc_tools --> pkg_tool_ask_user
@@ -469,6 +474,7 @@ flowchart LR
 | `ctx.llm` | `seam` | [`llm`](../packages/llm/llm) | [`llm-deepseek`](../packages/llm/llm-deepseek), [`llm-pi-ai`](../packages/llm/llm-pi-ai), [`llm-replay`](../packages/test-support/llm-replay) | [`agent-loop`](../packages/core/agent-loop), [`compaction-basic`](../packages/compaction/compaction-basic) | - | Adapters register provider implementations; the loop and compaction call the provider-neutral stream service. |
 | `ctx.deepseekLlmApiExtensions` | `seam` | [`deepseek-llm-api-extensions`](../packages/llm/deepseek-llm-api-extensions) | [`session-log-deepseek`](../packages/session/session-log-deepseek), [`plugin-package-inventory-deepseek`](../packages/llm/plugin-package-inventory-deepseek) | [`llm-deepseek`](../packages/llm/llm-deepseek) | - | Plugins prepare independent top-level fields; the official adapter merges them and commits their delivery state after HTTP acceptance. |
 | `ctx.tokenMeter` | `core` | [`token-meter`](../packages/llm/token-meter) | - | [`compaction-basic`](../packages/compaction/compaction-basic) | - | Owns isolated per-session replay folds; pressure consumers share immutable revisioned measurements. |
+| `ctx.tokenUsageStore` | `core` | [`token-usage`](../packages/session/token-usage) | - | `apiproxy` | - | Persists per-request usage records to SQLite and aggregates daily per-(provider, model) summaries for the web dashboard. |
 | `ctx.toolResultPruner` | `core` | [`compaction-tool-result-pruner`](../packages/compaction/compaction-tool-result-pruner) | - | [`compaction-basic`](../packages/compaction/compaction-basic) | - | Rewrites oversized current tool results through replayable single-node surface replacements before summary compaction. |
 | `ctx.sessions` | `core` | [`session`](../packages/core/session) | - | [`agent-loop`](../packages/core/agent-loop), [`agent`](../packages/core/agent), [`session-persistence`](../packages/session/session-persistence), [`session-query`](../packages/session-query/session-query), [`session-query-sqlite`](../packages/session-query/session-query-sqlite), [`subagent-in-process-driver`](../packages/subagent/subagent-in-process-driver), [`invariants`](../packages/runtime-diagnostics/invariants), [`message-feedback`](../packages/feedback/message-feedback) | - | Owns append-only Session instances and emits the durable session event feed. |
 | `ctx.sessionController` | `core` | [`api-session-controller`](../packages/api/session-controller) | - | - | - | Owns Session commands, cold reads, durable-event following, live control state, model catalogs, workspace opening, and Agent activation policy. |

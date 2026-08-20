@@ -2480,6 +2480,36 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'tokenUsageStore',
+    summary: 'The TokenUsageStore Service Definition contract: append per-request usage records (synchronous, called from the session firehose hot path — must not throw into the loop), and query the daily summary plus optional purge.',
+    description: 'The TokenUsageStore Service Definition contract: append per-request usage records (synchronous, called from the session firehose hot path — must not throw into the loop), and query the daily summary plus optional purge.\n\nThe append entry point is synchronous because it runs inside the `session/event` listener, which cordis dispatches stop-on-throw; the store absorbs its own write errors (logging a warning) and never rethrows.',
+    methods: [
+      {
+        signature: 'append(record: TokenUsageEventRecord): void',
+        description: 'Persist one per-request usage record. Synchronous and fail-contained: the firehose listener must not propagate errors into the agent loop.',
+        parameters: [{ name: 'record', description: 'the per-request record; owned by the store after the call.' }],
+      },
+      {
+        signature: 'dailySummary(date: string): TokenUsageDailySummary',
+        description: 'Aggregate every recorded call for one calendar day, grouped by (provider, model), with cross-group totals.',
+        parameters: [{ name: 'date', description: 'calendar day `YYYY-MM-DD`.' }],
+        returns: 'the daily summary; an empty `groups` array when no records exist for the day.',
+      },
+      {
+        signature: 'dailySummaryRange(startDate: string, endDate: string): TokenUsageDailySummary',
+        description: 'Aggregate every recorded call across a closed date range, grouped by (provider, model), with cross-group totals.',
+        parameters: [{ name: 'startDate', description: 'inclusive start calendar day `YYYY-MM-DD`.' }, { name: 'endDate', description: 'inclusive end calendar day `YYYY-MM-DD`.' }],
+        returns: 'the range summary; an empty `groups` array when no records exist in the range.',
+      },
+      {
+        signature: 'purge(before: number): number',
+        description: 'Drop every record whose `time` is strictly before `before`.',
+        parameters: [{ name: 'before', description: 'epoch milliseconds cutoff.' }],
+        returns: 'the number of rows deleted.',
+      },
+    ],
+  },
+  {
     key: 'toolResultPruner',
     summary: 'Deterministic head/middle/tail pruning for current tool-result surface nodes.',
     description: 'Deterministic head/middle/tail pruning for current tool-result surface nodes.',
@@ -5729,6 +5759,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'TokenUsage',
     declaration: 'export interface TokenUsage {\n    inputTokens: number;\n    outputTokens: number;\n    totalTokens?: number;\n    cacheReadTokens?: number;\n    cacheWriteTokens?: number;\n    reasoningTokens?: number;\n}',
+  },
+  {
+    name: 'TokenUsageDailyGroup',
+    declaration: 'export interface TokenUsageDailyGroup {\n    provider: string;\n    model: string;\n    requests: number;\n    turns: number;\n    llmMs: number;\n    toolMs: number;\n    uncachedInputTokens: number;\n    outputTokens: number;\n    cacheReadTokens: number;\n    cacheWriteTokens: number;\n    ttftMs: number;\n    ttftSamples: number;\n    decodeMs: number;\n}',
+  },
+  {
+    name: 'TokenUsageDailySummary',
+    declaration: 'export interface TokenUsageDailySummary {\n    date: string;\n    groups: readonly TokenUsageDailyGroup[];\n    totals: TokenUsageDailyGroup;\n}',
+  },
+  {
+    name: 'TokenUsageEventRecord',
+    declaration: 'export interface TokenUsageEventRecord {\n    time: number;\n    date: string;\n    sessionId: string;\n    provider: string;\n    model: string;\n    turn: number;\n    step: number;\n    uncachedInputTokens: number;\n    outputTokens: number;\n    cacheReadTokens: number;\n    cacheWriteTokens: number;\n    reasoningTokens: number | null;\n    ttftMs: number | null;\n    llmMs: number;\n    toolMs: number;\n    decodeMs: number | null;\n}',
   },
   {
     name: 'ToolCallKind',
