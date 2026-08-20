@@ -12,6 +12,7 @@ export { RpcId, transportError } from '../rpc.ts'
 export type { SessionId, SessionEvent } from '@deepseek-ai/dsh-session/types'
 export type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 export type { ContentBlock, StreamChunk } from '@deepseek-ai/dsh-llm/types'
+export type { TokenUsageDailySummaryView, TokenUsageGroupView } from '@deepseek-ai/dsh-token-usage/types'
 
 import type { RpcResponse, RpcResult } from '../rpc.ts'
 

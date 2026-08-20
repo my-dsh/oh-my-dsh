@@ -33,6 +33,7 @@ export type {
   RpcRequest, RpcResponse, RpcResult,
   ClientRequest, ServerResponse, RpcMessage,
   SessionId, SessionEvent, ContentBlock, StreamChunk,
+  TokenUsageDailySummaryView, TokenUsageGroupView,
 } from './api.ts'
 export {
   RpcId,

@@ -189,3 +189,31 @@ export interface TokenUsageStore {
    */
   purge(before: number): number
 }
+
+/**
+ * One (provider, model) group plus its derived averages — the client display row.
+ * Averages are derived client-side from {@link TokenUsageDailyGroup} sums.
+ */
+export interface TokenUsageGroupView extends TokenUsageDailyGroup {
+  /** Weighted throughput in tokens/sec (outputTokens / (decodeMs / 1000)); null when decodeMs is 0. */
+  averageThroughput: number | null
+  /** Arithmetic mean TTFT in ms (ttftMs / ttftSamples); null when ttftSamples is 0. */
+  averageTtftMs: number | null
+  /** Arithmetic mean step wall time in ms (llmMs / requests); null when requests is 0. */
+  averageLlmMs: number | null
+  /** Cache-hit ratio in [0,1] (cacheReadTokens / billed input); null when billed input is 0. */
+  cacheHitRatio: number | null
+}
+
+/**
+ * The complete daily-summary response: groups plus the cross-group totals view.
+ * The display counterpart of {@link TokenUsageDailySummary}, carrying derived averages.
+ */
+export interface TokenUsageDailySummaryView {
+  /** Calendar day the aggregates cover (YYYY-MM-DD). */
+  date: string
+  /** One row per (provider, model) active on the day, in stable (provider, model) order. */
+  groups: readonly TokenUsageGroupView[]
+  /** Cross-group totals, keyed by the sentinel `(total, total)`. */
+  totals: TokenUsageGroupView
+}

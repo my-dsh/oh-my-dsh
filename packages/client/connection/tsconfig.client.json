@@ -39,6 +39,9 @@
       "path": "../../settings/settings"
     },
     {
+      "path": "../../session/token-usage"
+    },
+    {
       "path": "../../host/directory-picker"
     },
     {

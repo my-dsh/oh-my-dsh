@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-12-cross-session-token-usage-dashboard.md
-2026-08-12-cross-session-token-usage-dashboard.md: 71fae7c708c7dcce47832b2d45eddf8eeca0ec10
-2026-08-12-cross-session-token-usage-dashboard.zh.md: 2fefc02490108a041c57676cca24cb9c46834264
+2026-08-12-cross-session-token-usage-dashboard.md: f7e585b908fea53749096d2c82bd25e1f35fe1b0
+2026-08-12-cross-session-token-usage-dashboard.zh.md: b9add361b4291327a0e5d2551b593968afcaf8e1

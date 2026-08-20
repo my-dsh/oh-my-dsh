@@ -58,6 +58,9 @@
       "path": "../../subagent/subagent"
     },
     {
+      "path": "../../session/token-usage"
+    },
+    {
       "path": "../../interaction/user-approval"
     },
     {

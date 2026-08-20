@@ -54,7 +54,7 @@ The inject face returns `{ api, t }` — the wire client's `tokenUsage` domain a
 
 ### Fixture data for development and testing
 
-The connection fixture (`fixture.ts`) returns a fixed two-group daily summary (deepseek-chat + deepseek-reasoner) with computed totals, so the dashboard renders a populated table in dev mode and fixture-driven tests without a running host.
+The connection fixture (`fixture.ts`) returns an empty daily summary (no per-group rows, an all-zero totals row) from the three `tokenUsage` methods, so the dashboard renders an empty table in dev mode and fixture-driven tests without a running host. The fixture's `FixtureApiClient.dispatch` switch routes `tokenUsage.*` to the in-memory `ApiProxy` stub.
 
 ## Testing
 
@@ -62,7 +62,8 @@ The connection fixture (`fixture.ts`) returns a fixed two-group daily summary (d
 - **Client format unit test** (`packages/client/token-usage/tests/format.client.spec.ts`): covers all formatting helpers (token counts, throughput, TTFT, cache-hit ratio, ordering, today's UTC key) as pure functions.
 - **Typecheck aggregates**: both `tsconfig.host.json` and `tsconfig.client.json` pass with 0 errors.
 - **Lint**: oxlint passes with 0 warnings and 0 errors across all new and modified files.
-- **Fixture FakeApiClient stubs**: both `connection/tests/fake-api.client.ts` and `runtime/tests/fake-api.client.ts` updated with `tokenUsage` members; both apiproxy test fixtures (`client-handler.spec.ts`, `fetch-carrier.spec.ts`) updated.
+- **Fixture FakeApiClient stubs**: both `connection/tests/fake-api.client.ts` and `runtime/tests/fake-api.client.ts` carry `tokenUsage` members returning empty summaries; both apiproxy test fixtures (`client-handler.spec.ts`, `fetch-carrier.spec.ts`) program the domain.
+- **Client type re-export chain**: `TokenUsageDailySummaryView` and `TokenUsageGroupView` re-export through `@deepseek-ai/dsh-host-apiproxy/api` → `dsh-client-connection/src/client/api.ts` → `dsh-client-connection/client` → `@deepseek-ai/dsh-api-remotes/client`, so the client plugin names one assembly package instead of importing a host package.
 
 ## Alternatives considered
 
