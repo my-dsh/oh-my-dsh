@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-08-20-tsdown-preset-root-from-process-cwd.md
+2026-08-20-tsdown-preset-root-from-process-cwd.md: 242313aa006da25847314add11b97d0846e88bc6
+2026-08-20-tsdown-preset-root-from-process-cwd.zh.md: 02f56218f791c9bc67c24dd20f49830750f12e34
