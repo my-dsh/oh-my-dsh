@@ -14,6 +14,7 @@ import type { SettingsApi } from './settings.ts'
 import type { CredentialsApi } from './credentials.ts'
 import type { LlmApi } from './llm.ts'
 import type { SubagentsApi } from './subagents.ts'
+import type { TokenUsageApi } from './token-usage.ts'
 import type { RpcResponse } from './rpc.ts'
 
 /**
@@ -74,6 +75,9 @@ export interface RpcMethodMap {
   'llm.providers': LlmApi['providers']
   'llm.models': LlmApi['models']
   'llm.discoverModels': LlmApi['discoverModels']
+  'tokenUsage.dailySummary': TokenUsageApi['dailySummary']
+  'tokenUsage.dailySummaryRange': TokenUsageApi['dailySummaryRange']
+  'tokenUsage.purge': TokenUsageApi['purge']
 }
 
 /** Business request payload of method K (reaches through the RpcRequest narrow form to payload). */

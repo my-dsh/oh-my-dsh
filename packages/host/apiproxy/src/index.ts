@@ -91,6 +91,7 @@ export class ApiProxyService extends Service implements ApiProxy {
   readonly llm: ApiProxy['llm']
   readonly events: ApiProxy['events']
   readonly downloads: ApiProxy['downloads']
+  readonly tokenUsage: ApiProxy['tokenUsage']
   readonly respond: ApiProxy['respond']
 
   constructor(ctx: Context, config: Config) {
@@ -119,6 +120,7 @@ export class ApiProxyService extends Service implements ApiProxy {
     this.llm = api.llm
     this.events = api.events
     this.downloads = api.downloads
+    this.tokenUsage = api.tokenUsage
     // createApiProxy returns closures (no `this` capture), so the bind is
     // behavior-neutral.
     this.respond = api.respond.bind(api)

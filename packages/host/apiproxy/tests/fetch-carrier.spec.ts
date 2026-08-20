@@ -294,6 +294,11 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
         return new Response('stub', { status: 404 })
       },
     },
+    tokenUsage: {
+      dailySummary(request) { return Promise.resolve({ rpcId: request.rpcId, result: { ok: true, value: { date: '', groups: [], totals: { provider: '', model: '', requests: 0, turns: 0, llmMs: 0, toolMs: 0, uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, ttftMs: 0, ttftSamples: 0, decodeMs: 0, averageThroughput: null, averageTtftMs: null, averageLlmMs: null, cacheHitRatio: null } } } }) },
+      dailySummaryRange(request) { return Promise.resolve({ rpcId: request.rpcId, result: { ok: true, value: { date: '', groups: [], totals: { provider: '', model: '', requests: 0, turns: 0, llmMs: 0, toolMs: 0, uncachedInputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, ttftMs: 0, ttftSamples: 0, decodeMs: 0, averageThroughput: null, averageTtftMs: null, averageLlmMs: null, cacheHitRatio: null } } } }) },
+      purge(request) { return Promise.resolve({ rpcId: request.rpcId, result: { ok: true, value: { deleted: 0 } } }) },
+    },
   }
 }
 
