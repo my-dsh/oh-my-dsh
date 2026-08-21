@@ -123,6 +123,10 @@
   color: var(--dsw-alias-status-danger, #d4380d);
 }
 
+.tableWrap {
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

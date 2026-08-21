@@ -22,6 +22,12 @@
     },
     {
       "path": "../../core/session"
+    },
+    {
+      "path": "../../util/step-timing"
+    },
+    {
+      "path": "../../util/zoned-time"
     }
   ]
 }

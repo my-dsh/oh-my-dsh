@@ -241,8 +241,9 @@ function KpiCards({
   t: ((key: DashboardKey) => string) | undefined
 }) {
   const totalInput = totals.uncachedInputTokens
+  const cachedInput = totals.cacheReadTokens + totals.cacheWriteTokens
   const totalOutput = totals.outputTokens
-  const totalTokens = totalInput + totalOutput
+  const totalTokens = totalInput + cachedInput + totalOutput
   const cacheHitHint = useMemo(() => {
     if (totals.cacheHitRatio === null) return undefined
     return totals.cacheHitRatio >= 0.8 ? t?.('kpi.cacheHitHighHint') : undefined
@@ -255,7 +256,7 @@ function KpiCards({
           <span className={css.kpiLabel}>{t?.('kpi.totalTokens') ?? 'Total tokens'}</span>
           <span className={css.kpiValue}>{formatTokens(totalTokens)}</span>
           <span className={css.kpiHint}>
-            {`${formatTokens(totalInput)} in · ${formatTokens(totalOutput)} out`}
+            {`${formatTokens(totalInput + cachedInput)} in · ${formatTokens(totalOutput)} out`}
           </span>
         </div>
         <div className={css.kpiCard}>
@@ -305,28 +306,32 @@ function SummaryTable({
 }) {
   const rows = useMemo(() => orderedGroups(summary), [summary])
   return (
-    <table className={css.table}>
-      <thead>
-        <tr>
-          <th className={css.colProvider}>{t?.('col.provider') ?? 'Provider'}</th>
-          <th className={css.colModel}>{t?.('col.model') ?? 'Model'}</th>
-          <th className={css.numCol}>{t?.('col.turns') ?? 'Turns'}</th>
-          <th className={css.numCol}>{t?.('col.input') ?? 'Input'}</th>
-          <th className={css.numCol}>{t?.('col.output') ?? 'Output'}</th>
-          <th className={css.numCol}>{t?.('col.cacheHit') ?? 'Cache hit'}</th>
-          <th className={css.numCol}>{t?.('col.throughput') ?? 'Avg speed'}</th>
-          <th className={css.numCol}>{t?.('col.ttft') ?? 'Avg TTFT'}</th>
-          <th className={css.numCol}>{t?.('col.llm') ?? 'Avg time'}</th>
-          <th className={css.numCol}>{t?.('col.tool') ?? 'Tool time'}</th>
-          <th className={css.numCol}>{t?.('col.requests') ?? 'Requests'}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(group => (
-          <GroupRow key={`${group.provider}/${group.model}`} group={group} />
-        ))}
-      </tbody>
-    </table>
+    <div className={css.tableWrap}>
+      <table className={css.table}>
+        <thead>
+          <tr>
+            <th className={css.colProvider}>{t?.('col.provider') ?? 'Provider'}</th>
+            <th className={css.colModel}>{t?.('col.model') ?? 'Model'}</th>
+            <th className={css.numCol}>{t?.('col.turns') ?? 'Turns'}</th>
+            <th className={css.numCol}>{t?.('col.uncachedInput') ?? 'Uncached input'}</th>
+            <th className={css.numCol}>{t?.('col.cacheRead') ?? 'Cache read'}</th>
+            <th className={css.numCol}>{t?.('col.cacheWrite') ?? 'Cache write'}</th>
+            <th className={css.numCol}>{t?.('col.output') ?? 'Output'}</th>
+            <th className={css.numCol}>{t?.('col.cacheHit') ?? 'Cache hit'}</th>
+            <th className={css.numCol}>{t?.('col.throughput') ?? 'Avg speed'}</th>
+            <th className={css.numCol}>{t?.('col.ttft') ?? 'Avg TTFT'}</th>
+            <th className={css.numCol}>{t?.('col.llm') ?? 'Avg time'}</th>
+            <th className={css.numCol}>{t?.('col.tool') ?? 'Tool time'}</th>
+            <th className={css.numCol}>{t?.('col.requests') ?? 'Requests'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(group => (
+            <GroupRow key={`${group.provider}/${group.model}`} group={group} />
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -346,6 +351,8 @@ function GroupRow({
       <td className={css.colModel}>{group.model}</td>
       <td className={css.numCol}>{group.turns}</td>
       <td className={css.numCol}>{formatTokens(group.uncachedInputTokens)}</td>
+      <td className={css.numCol}>{formatTokens(group.cacheReadTokens)}</td>
+      <td className={css.numCol}>{formatTokens(group.cacheWriteTokens)}</td>
       <td className={css.numCol}>{formatTokens(group.outputTokens)}</td>
       <td className={clsx(css.numCol, cacheHigh ? css.cacheHitHigh : undefined)}>{formatCacheHit(group)}</td>
       <td className={css.numCol}>{formatThroughput(group)}</td>
