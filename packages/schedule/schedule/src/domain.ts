@@ -5,6 +5,7 @@
 
 import { SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionLogOffset as SessionLogOffsetType } from '@deepseek-ai/dsh-session'
+import { resolveZonedWallClock } from '@deepseek-ai/dsh-zoned-time'
 import type {
   AfterScheduleRecord,
   AtInput,
@@ -36,7 +37,6 @@ const OFFSET_INSTANT = new RegExp(
 const LOCAL_DATE = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/
 const LOCAL_TIME = /^(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?:\.(?<fraction>\d{1,3}))?$/
 const IANA_ZONE = /^[A-Za-z][A-Za-z0-9_+.-]*(?:\/[A-Za-z0-9_+.-]+)+$/
-const OFFSET_NAME = /^GMT(?:(?<sign>[+-])(?<hour>\d{2}):(?<minute>\d{2})(?::(?<second>\d{2}))?)?$/
 
 /** Error from malformed or transition-invalid durable Schedule data. */
 export class ScheduleLogError extends Error {
@@ -298,88 +298,18 @@ function parseLocalAt(value: LocalAtInput): CalendarParts {
   return parts
 }
 
-/** Format one epoch into exact local fields and the zone offset that produced them. */
-function localProjection(formatter: Intl.DateTimeFormat, epoch: number): CalendarParts & { offset: number } {
-  const values = Object.fromEntries(formatter.formatToParts(epoch).map(part => [part.type, part.value]))
-  const zoneName = values['timeZoneName']
-  /* v8 ignore next -- a formatter configured with longOffset always emits this part. */
-  const offsetMatch = typeof zoneName === 'string' ? OFFSET_NAME.exec(zoneName) : null
-  const offsetGroups = offsetMatch?.groups
-  /* v8 ignore next -- the formatter requested longOffset, whose part is defined by Intl. */
-  if (offsetMatch === null || offsetGroups === undefined) {
-    throw new ScheduleInputError('invalid_time_zone', 'time_zone did not expose a usable UTC offset.')
-  }
-  const direction = offsetGroups['sign'] === '-' ? -1 : 1
-  /* v8 ignore next -- some Intl builds spell UTC as bare GMT instead of GMT+00:00. */
-  const offset = offsetGroups['sign'] === undefined
-    ? 0
-    : direction * (
-      groupNumber(offsetGroups, 'hour') * 3600
-      + groupNumber(offsetGroups, 'minute') * 60
-      + Number(offsetGroups['second'] ?? '0')
-    ) * 1_000
-  return {
-    year: Number(values['year']),
-    month: Number(values['month']),
-    day: Number(values['day']),
-    hour: Number(values['hour']),
-    minute: Number(values['minute']),
-    second: Number(values['second']),
-    millisecond: Number(values['fractionalSecond']),
-    offset,
-  }
-}
-
-/** Resolve a local wall-clock value, choosing the first instant in an overlap and rejecting a gap. */
+/** Resolve a local wall-clock value, choosing the earliest instant in an overlap and rejecting a gap. */
 function resolveLocalInstant(parts: CalendarParts, timeZone: string): number {
-  const localEpoch = calendarEpoch(parts)
-  const formatter = new Intl.DateTimeFormat('en-US-u-ca-iso8601-nu-latn', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    fractionalSecondDigits: 3,
-    hourCycle: 'h23',
-    timeZoneName: 'longOffset',
-  })
-  const offsets = new Set<number>()
-  for (const delta of [-172_800_000, -86_400_000, 0, 86_400_000, 172_800_000]) {
-    const sample = Math.min(MAX_FOUR_DIGIT_YEAR_MS, Math.max(MIN_FOUR_DIGIT_YEAR_MS, localEpoch + delta))
-    offsets.add(localProjection(formatter, sample).offset)
+  const resolution = resolveZonedWallClock(timeZone, parts)
+  const first = resolution.instants[0]
+  if (first !== undefined) return first
+  if (resolution.outOfRange) {
+    throw new ScheduleInputError(
+      'time_out_of_range',
+      'The scheduled time must be representable as a four-digit-year RFC 3339 UTC instant.',
+    )
   }
-  const candidates: number[] = []
-  let outOfRange = false
-  for (const offset of offsets) {
-    const candidate = localEpoch - offset
-    if (candidate < MIN_FOUR_DIGIT_YEAR_MS || candidate > MAX_FOUR_DIGIT_YEAR_MS) {
-      outOfRange = true
-      continue
-    }
-    const projected = localProjection(formatter, candidate)
-    if (projected.year === parts.year
-      && projected.month === parts.month
-      && projected.day === parts.day
-      && projected.hour === parts.hour
-      && projected.minute === parts.minute
-      && projected.second === parts.second
-      && projected.millisecond === parts.millisecond) {
-      candidates.push(candidate)
-    }
-  }
-  const first = candidates.sort((left, right) => left - right)[0]
-  if (first === undefined) {
-    if (outOfRange) {
-      throw new ScheduleInputError(
-        'time_out_of_range',
-        'The scheduled time must be representable as a four-digit-year RFC 3339 UTC instant.',
-      )
-    }
-    throw new ScheduleInputError('invalid_rule', 'The local at time does not exist in the selected time zone.')
-  }
-  return first
+  throw new ScheduleInputError('invalid_rule', 'The local at time does not exist in the selected time zone.')
 }
 
 /** Decode the exact v1 after record shape. */

@@ -76,6 +76,26 @@ describe('TokenUsageDashboard', () => {
     expect(api.tokenUsage.dailySummary).toHaveBeenCalledTimes(1)
   })
 
+  it('renders the four disjoint token-bucket columns and billed total in the per-group table', async () => {
+    const api = apiMock()
+    render(<TokenUsageDashboard api={api} t={t} />)
+    await openPanel()
+    await waitFor(() => { expect(screen.getByText('供应商')).toBeTruthy() })
+    // The Input column is now split into the four disjoint buckets.
+    expect(screen.getByText('未缓存输入')).toBeTruthy()
+    expect(screen.getByText('缓存读')).toBeTruthy()
+    expect(screen.getByText('缓存写')).toBeTruthy()
+    // The chat group's buckets: uncached 3600 → 3.6K, cacheRead 9200 → 9.2K,
+    // cacheWrite 320 → 320, output 8650 → 8.7K.
+    expect(screen.getAllByText('3.6K').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('9.2K').length).toBeGreaterThan(0)
+    expect(screen.getByText('320')).toBeTruthy()
+    expect(screen.getAllByText('8.7K').length).toBeGreaterThan(0)
+    // KPI total uses the billed口径: 3600 + 9200 + 320 + 8650 = 21770 → 21.8K.
+    expect(screen.getAllByText('21.8K').length).toBeGreaterThan(0)
+    expect(api.tokenUsage.dailySummary).toHaveBeenCalledTimes(1)
+  })
+
   it('renders the turns and avg-time KPI cards from the totals row', async () => {
     const api = apiMock()
     render(<TokenUsageDashboard api={api} t={t} />)

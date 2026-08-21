@@ -1,7 +1,7 @@
 /**
  * The token-usage capture fold: mounting the plugin beside a real session
  * store and a fake `tokenUsageStore` service, then appending step boundary,
- * chunk, tool-pair, and assembled-message events to a live session. The
+ * attempt, tool-pair, and assembled-message events to a live session. The
  * record is written at `step/end` — not `assistant/message` — so tool wall
  * time, which the agent loop accrues only after it dispatches tool calls,
  * lands in the persisted record. Pinning that deferral is the point of this
@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { Context, Service } from '@deepseek-ai/cordis'
-import { CallId, createAssistantMessage, createToolResultMessage } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, createAssistantMessage, createToolResultMessage } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId, type Session } from '@deepseek-ai/dsh-session'
 import { apply as tokenUsageApply } from '../src/index.ts'
 import type { TokenUsageEventRecord } from '../src/types.ts'
@@ -52,13 +52,20 @@ describe('token-usage capture fold', () => {
     const usage = { inputTokens: 10, outputTokens: 60, cacheReadTokens: 5 }
 
     const stepStart = session.append('step/start', { turn: 1, step: 1 })
-    // A real gap so first-token latency is a positive, bounded time.
+    // A real gap so first-token latency is a positive, bounded time. The
+    // stream record carries its own instant, which is what TTFT measures.
     await gap()
-    const firstToken = session.append('assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'a' } })
+    const streamTime = Date.now()
+    session.append('assistant/attempt', {
+      turn: 1,
+      step: 1,
+      stream: [{ type: 'chunk', time: streamTime, chunk: { type: 'text-delta', index: 0, text: 'a' } }],
+    })
     await gap()
     const message = session.append('assistant/message', {
       turn: 1,
       step: 1,
+      stream: [],
       message: createAssistantMessage({
         content: [{ type: 'text', text: 'answer' }],
         source: { provider: 'mock', model: 'mock-model' },
@@ -69,12 +76,12 @@ describe('token-usage capture fold', () => {
     expect(store.records).toHaveLength(0)
 
     await gap()
-    const toolCall = session.append('tool/call', { turn: 1, step: 1, callId: CallId('call_1'), name: 'read', arguments: '{}' })
+    const toolCall = session.append('tool/call', { turn: 1, step: 1, callId: ToolCallId('call_1'), name: 'read', arguments: '{}' })
     await gap(8)
     const toolResult = session.append('tool/result', {
       turn: 1,
       step: 1,
-      message: createToolResultMessage({ callId: CallId('call_1'), content: [{ type: 'text', text: 'ok' }], isError: false }),
+      message: createToolResultMessage({ callId: ToolCallId('call_1'), content: [{ type: 'text', text: 'ok' }], isError: false }),
     }, { surfaceOp: 'append' })
     session.append('step/end', { turn: 1, step: 1 })
 
@@ -94,8 +101,8 @@ describe('token-usage capture fold', () => {
     // Model time spans step/start → assembled message; first-token latency
     // spans step/start → first token; decode spans first token → message.
     expect(record.llmMs).toBe(message.time - stepStart.time)
-    expect(record.ttftMs).toBe(firstToken.time - stepStart.time)
-    expect(record.decodeMs).toBe(message.time - firstToken.time)
+    expect(record.ttftMs).toBe(streamTime - stepStart.time)
+    expect(record.decodeMs).toBe(message.time - streamTime)
   })
 
   it('keeps the first message facts across a defensive duplicate assistant/message', async () => {
@@ -106,6 +113,7 @@ describe('token-usage capture fold', () => {
     session.append('assistant/message', {
       turn: 1,
       step: 2,
+      stream: [],
       message: createAssistantMessage({
         content: [{ type: 'text', text: 'a' }],
         source: { provider: 'mock', model: 'mock-model' },
@@ -116,6 +124,7 @@ describe('token-usage capture fold', () => {
     session.append('assistant/message', {
       turn: 1,
       step: 2,
+      stream: [],
       message: createAssistantMessage({
         content: [{ type: 'text', text: 'replacement' }],
         source: { provider: 'other', model: 'other-model' },
@@ -136,10 +145,11 @@ describe('token-usage capture fold', () => {
     const { store, session } = await harness()
     // No-usage step: tool events must not be tracked against a never-written record.
     session.append('step/start', { turn: 1, step: 3 })
-    session.append('tool/call', { turn: 1, step: 3, callId: CallId('call_x'), name: 'read', arguments: '{}' })
+    session.append('tool/call', { turn: 1, step: 3, callId: ToolCallId('call_x'), name: 'read', arguments: '{}' })
     session.append('assistant/message', {
       turn: 1,
       step: 3,
+      stream: [],
       message: createAssistantMessage({
         content: [{ type: 'text', text: 'local' }],
         source: { provider: 'mock', model: 'mock-model' },
@@ -148,7 +158,11 @@ describe('token-usage capture fold', () => {
     session.append('step/end', { turn: 1, step: 3 })
     // Cancelled step: step/start but no assembled message → no record.
     session.append('step/start', { turn: 1, step: 4 })
-    session.append('assistant/chunk', { turn: 1, step: 4, chunk: { type: 'text-delta', index: 0, text: 'partial' } })
+    session.append('assistant/attempt', {
+      turn: 1,
+      step: 4,
+      stream: [{ type: 'chunk', time: Date.now(), chunk: { type: 'text-delta', index: 0, text: 'partial' } }],
+    })
     session.append('step/end', { turn: 1, step: 4 })
 
     expect(store.records).toHaveLength(0)
@@ -163,6 +177,7 @@ describe('token-usage capture fold', () => {
     session.append('assistant/message', {
       turn: 1,
       step: 5,
+      stream: [],
       message: createAssistantMessage({
         content: [{ type: 'text', text: 'x' }],
         source: { provider: 'mock', model: 'mock-model' },

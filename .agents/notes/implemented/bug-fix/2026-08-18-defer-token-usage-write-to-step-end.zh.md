@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-Token 消费记录仪表盘的「工具耗时」列对所有会话都显示 `0`。捕获折叠（由[跨会话 token 使用仪表盘](../architecture/2026-08-12-cross-session-token-usage-dashboard.md)引入）在每个请求的 `assistant/message` 边界事件上写一条 `TokenUsageEventRecord`，但 agent 循环是在追加 `assistant/message` *之后*才派发工具调用（`packages/core/agent-loop/src/agent.ts` 里的 `executeToolCalls`）。在消息组装时刻 `open.toolMs` 仍是 `0`，于是即使是运行了长时间工具调用的步骤，落库的每条记录也携带 `toolMs: 0`。`(session_id, turn, step)` 主键是替换而非追加，所以已写入的行永远保持为零；因此仪表盘对修复之前写入的所有历史都显示零工具耗时，修复只对之后捕获的记录生效。
+Token 消费记录仪表盘的「工具耗时」列对所有会话都显示 `0`。捕获折叠（由[跨会话 token 使用仪表盘](../architecture/2026-08-12-cross-session-token-usage-dashboard.zh.md)引入）在每个请求的 `assistant/message` 边界事件上写一条 `TokenUsageEventRecord`，但 agent 循环是在追加 `assistant/message` *之后*才派发工具调用（`packages/core/agent-loop/src/agent.ts` 里的 `executeToolCalls`）。在消息组装时刻 `open.toolMs` 仍是 `0`，于是即使是运行了长时间工具调用的步骤，落库的每条记录也携带 `toolMs: 0`。`(session_id, turn, step)` 主键是替换而非追加，所以已写入的行永远保持为零；因此仪表盘对修复之前写入的所有历史都显示零工具耗时，修复只对之后捕获的记录生效。
 
 ## 决策
 

@@ -39,6 +39,7 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-projection": "workspace:^",
+    "@deepseek-ai/dsh-step-timing": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   },
   "dependencies": {
@@ -50,6 +51,7 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-session-projection": "workspace:^",
+    "@deepseek-ai/dsh-step-timing": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^"
   }
 }
