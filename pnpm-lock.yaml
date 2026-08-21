@@ -6110,6 +6110,9 @@ importers:
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../core/tools
+      '@deepseek-ai/dsh-zoned-time':
+        specifier: workspace:^
+        version: link:../../util/zoned-time
 
   packages/sdk/client:
     devDependencies:
@@ -6523,6 +6526,9 @@ importers:
       '@deepseek-ai/dsh-session-projection':
         specifier: workspace:^
         version: link:../session-projection
+      '@deepseek-ai/dsh-step-timing':
+        specifier: workspace:^
+        version: link:../../util/step-timing
 
   packages/session/session-telemetry:
     devDependencies:
@@ -6726,6 +6732,12 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
+      '@deepseek-ai/dsh-step-timing':
+        specifier: workspace:^
+        version: link:../../util/step-timing
+      '@deepseek-ai/dsh-zoned-time':
+        specifier: workspace:^
+        version: link:../../util/zoned-time
 
   packages/settings/settings:
     dependencies:
@@ -8395,7 +8407,25 @@ importers:
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
 
+  packages/util/step-timing:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+
   packages/util/timeout:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+
+  packages/util/zoned-time:
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:^

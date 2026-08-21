@@ -5,10 +5,12 @@
  * {@link TokenUsageStore}. The store is the capability's persistence layer;
  * this plugin owns only the capture fold and the append call.
  *
- * Capture mirrors `session-stats`'s timing fold (`step/start` → first token
- * chunk → `assistant/message`) so the TTFT and decode fields agree with the
- * session-scoped projection, and joins the route from the assembled message's
- * `source` (provider/model travel with the usage on `assistant/message`).
+ * Timing boundaries come from the shared `step-timing` fold — the same
+ * primitives `session-stats` folds with, so TTFT and decode durations agree
+ * with the session-scoped projection. The record is stashed at
+ * `assistant/message` (which joins the route: provider/model travel with the
+ * usage on that event) and written at `step/end`, after tools dispatched by
+ * the agent loop have landed their results.
  *
  * @module @deepseek-ai/dsh-token-usage
  */
@@ -17,6 +19,17 @@ import type { Context } from '@deepseek-ai/cordis'
 import { isTokenDelta } from '@deepseek-ai/dsh-llm/message'
 import type { TokenUsage } from '@deepseek-ai/dsh-llm/types'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
+import type { StepTimingFold } from '@deepseek-ai/dsh-step-timing'
+import {
+  stepTimingDecodeMs,
+  stepTimingLlmMs,
+  stepTimingOnMessage,
+  stepTimingOnToken,
+  stepTimingOnToolCall,
+  stepTimingOnToolResult,
+  stepTimingOpen,
+  stepTimingTtftMs,
+} from '@deepseek-ai/dsh-step-timing'
 import { dayKey } from './store.ts'
 import type { TokenUsageEventRecord } from './types.ts'
 
@@ -34,29 +47,17 @@ export const name = 'token-usage'
 export const inject = ['tokenUsageStore']
 
 /**
- * One open step's timing facts, tracked across the boundary events so the
- * record written at `step/end` carries TTFT, decode duration, and tool wall
- * time.
+ * One open step's capture state: the shared timing fold plus the usage facts
+ * stashed at `assistant/message` for the `step/end` write. Null before the
+ * message assembles or when it carried no usage — in both cases no record is
+ * written. The write is deferred to `step/end` because tools execute after
+ * `assistant/message` (the agent loop dispatches `executeToolCalls` only
+ * after appending the assembled message), so tool wall time is incomplete at
+ * message-assembly time.
  */
-interface OpenStep {
-  readonly turn: number
-  readonly step: number
-  readonly startTime: number
-  firstTokenTime: number | null
-  /** Tool wall time from `tool/call` → `tool/result` pairs that landed inside this step. */
-  toolMs: number
-  /** Dispatch times of tool calls whose result has not landed, by callId. */
-  readonly pendingCalls: Record<string, number>
-  /**
-   * Stashed at `assistant/message` for the `step/end` write. Null before the
-   * message assembles or when it carried no usage — in both cases no record is
-   * written. The write is deferred to `step/end` because tools execute after
-   * `assistant/message` (the agent loop dispatches `executeToolCalls` only
-   * after appending the assembled message), so tool wall time is incomplete at
-   * message-assembly time.
-   */
-  record: {
-    readonly time: number
+interface OpenCapture {
+  readonly fold: StepTimingFold
+  readonly stash: {
     readonly usage: TokenUsage
     readonly provider: string
     readonly model: string
@@ -71,14 +72,14 @@ interface OpenStep {
  * @param ctx - registrant context carrying the session firehose and the store.
  */
 export function apply(ctx: Context): void {
-  // Per-session open-step state. Keyed by the Session object (which belongs to
+  // Per-session open-capture state. Keyed by the Session object (which belongs to
   // the session store and outlives any capture fiber), mirroring the
   // telemetry coordinator's WeakMap lifetime choice. Dies with the session.
-  const openSteps = new WeakMap<Session, OpenStep>()
+  const openCaptures = new WeakMap<Session, OpenCapture>()
 
-  const openStepOf = (session: Session): OpenStep | undefined => openSteps.get(session)
-  const setOpenStep = (session: Session, step: OpenStep): void => { openSteps.set(session, step) }
-  const clearOpenStep = (session: Session): void => { openSteps.delete(session) }
+  const openCaptureOf = (session: Session): OpenCapture | undefined => openCaptures.get(session)
+  const setOpenCapture = (session: Session, open: OpenCapture): void => { openCaptures.set(session, open) }
+  const clearOpenCapture = (session: Session): void => { openCaptures.delete(session) }
 
   ctx.on('session/event', (session, event) => {
     try {
@@ -91,100 +92,92 @@ export function apply(ctx: Context): void {
   })
 
   /**
-   * Fold one event into the open-step state. The per-call record is stashed at
-   * `assistant/message` and written at `step/end`, after tool calls dispatched
-   * by the agent loop have landed their results. Mirrors `session-stats`'s
-   * boundary logic so TTFT and decode timings agree with the session-scoped
-   * projection.
+   * Fold one event into the open-capture state. The per-call record is
+   * stashed at `assistant/message` and written at `step/end`, after tool calls
+   * dispatched by the agent loop have landed their results.
    */
   function captureEvent(session: Session, event: SessionEvent): void {
     switch (event.type) {
       case 'step/start':
-        setOpenStep(session, {
-          turn: event.data.turn,
-          step: event.data.step,
-          startTime: event.time,
-          firstTokenTime: null,
-          toolMs: 0,
-          pendingCalls: {},
-          record: null,
+        setOpenCapture(session, {
+          fold: stepTimingOpen(event.data.turn, event.data.step, event.time),
+          stash: null,
         })
         return
       case 'assistant/chunk': {
-        const open = openStepOf(session)
-        if (open === undefined || open.turn !== event.data.turn || open.step !== event.data.step) return
-        if (open.firstTokenTime !== null || !isTokenDelta(event.data.chunk)) return
-        setOpenStep(session, { ...open, firstTokenTime: event.time })
+        const open = openCaptureOf(session)
+        if (open === undefined || open.fold.turn !== event.data.turn || open.fold.step !== event.data.step) return
+        setOpenCapture(session, {
+          ...open,
+          fold: stepTimingOnToken(open.fold, event.time, isTokenDelta(event.data.chunk)),
+        })
         return
       }
       case 'tool/call': {
-        const open = openStepOf(session)
-        if (open === undefined || open.turn !== event.data.turn || open.step !== event.data.step) return
-        setOpenStep(session, { ...open, pendingCalls: { ...open.pendingCalls, [event.data.callId]: event.time } })
+        const open = openCaptureOf(session)
+        if (open === undefined || open.fold.turn !== event.data.turn || open.fold.step !== event.data.step) return
+        setOpenCapture(session, {
+          ...open,
+          fold: stepTimingOnToolCall(open.fold, event.data.callId, event.time),
+        })
         return
       }
       case 'tool/result': {
-        const open = openStepOf(session)
+        const open = openCaptureOf(session)
         if (open === undefined) return
-        // Own-key check mirrors session-stats: callId is provider-minted, so
-        // a prototype property name on a result with no recorded call must read
-        // as unmatched rather than an inherited function.
-        const callId = event.data.message.source.callId
-        const dispatched = Object.hasOwn(open.pendingCalls, callId) ? open.pendingCalls[callId] : undefined
-        if (dispatched === undefined) return
-        const pendingCalls = Object.fromEntries(
-          Object.entries(open.pendingCalls).filter(([id]) => id !== callId),
-        )
-        setOpenStep(session, {
+        // Own-key matching against the step's own dispatches lives in the
+        // shared fold; an unmatched result returns it unchanged.
+        setOpenCapture(session, {
           ...open,
-          toolMs: open.toolMs + Math.max(0, event.time - dispatched),
-          pendingCalls,
+          fold: stepTimingOnToolResult(open.fold, event.data.message.source.callId, event.time),
         })
         return
       }
       case 'assistant/message': {
-        const open = openStepOf(session)
-        if (open === undefined || open.turn !== event.data.turn || open.step !== event.data.step) {
-          clearOpenStep(session)
+        const open = openCaptureOf(session)
+        if (open === undefined || open.fold.turn !== event.data.turn || open.fold.step !== event.data.step) {
+          clearOpenCapture(session)
           return
         }
-        // A duplicate assembled message (defensive) finds the stash already
-        // set; ignore it so the first message's facts are preserved.
-        if (open.record !== null) return
+        // A duplicate assembled message (defensive) finds the stamp already
+        // set; ignore it so the first message's facts are preserved. The
+        // stash exists exactly when the stamp does, set together below.
+        if (open.fold.messageTime !== null) return
         const usage = event.data.usage
         if (usage === undefined) {
           // No provider accounting for this call (e.g. a locally-served step
           // with no usage); nothing durable to record, and no record to
           // update at step/end. Clear so tool events for this step are not
           // tracked against a write that will never happen.
-          clearOpenStep(session)
+          clearOpenCapture(session)
           return
         }
-        // Stash the message facts and keep the open step alive: tools execute
-        // after this event, so the record is written at step/end with the
-        // complete tool wall time.
+        // Stash the message facts and keep the open capture alive: tools
+        // execute after this event, so the record is written at step/end with
+        // the complete tool wall time.
         const source = event.data.message.source
-        setOpenStep(session, {
-          ...open,
-          record: { time: event.time, usage, provider: source.provider, model: source.model },
+        setOpenCapture(session, {
+          fold: stepTimingOnMessage(open.fold, event.time),
+          stash: { usage, provider: source.provider, model: source.model },
         })
         return
       }
       case 'step/end': {
-        const open = openStepOf(session)
+        const open = openCaptureOf(session)
         if (open === undefined) return
-        if (open.record !== null) {
-          const record = recordFromStashedStep(session, open)
-          ctx.tokenUsageStore.append(record)
+        // The stash exists exactly when the shared fold stamped its message,
+        // so both guards together fully determine the record's facts.
+        if (open.stash !== null && open.fold.messageTime !== null) {
+          ctx.tokenUsageStore.append(recordFromStashedStep(session, open.fold, open.stash))
         }
-        clearOpenStep(session)
+        clearOpenCapture(session)
         return
       }
       case 'turn/end':
         // Safety net: step/end (in the loop's finally) should have already
         // written and cleared. If it did not (a step that never entered), just
-        // clear the open step.
-        clearOpenStep(session)
+        // clear the open capture.
+        clearOpenCapture(session)
         return
       default:
         return
@@ -194,39 +187,38 @@ export function apply(ctx: Context): void {
 
 /**
  * Build the per-call record from the stashed `assistant/message` facts and the
- * open step's accumulated timing (including tool wall time from `tool/call` →
+ * shared timing fold (including tool wall time from `tool/call` →
  * `tool/result` pairs that landed between `assistant/message` and `step/end`).
+ * The caller has already narrowed both guards (`stash !== null`,
+ * `fold.messageTime !== null`); the message-time accessor still returns a
+ * nullable contract, so an impossible null fails loud instead of writing a
+ * zero-timed row.
  */
 function recordFromStashedStep(
   session: Session,
-  open: OpenStep,
+  fold: StepTimingFold,
+  stash: NonNullable<OpenCapture['stash']>,
 ): TokenUsageEventRecord {
-  // The sole caller (`step/end`) invokes this only when `open.record !== null`;
-  // a mutable property reached through the parameter cannot be narrowed here.
-  // oxlint-disable-next-line typescript/no-non-null-assertion -- guarded at the step/end call site
-  const record = open.record!
-  const ttftMs = open.firstTokenTime !== null ? Math.max(0, open.firstTokenTime - open.startTime) : null
-  const outputTokens = typeof record.usage.outputTokens === 'number' ? record.usage.outputTokens : 0
-  const llmMs = Math.max(0, record.time - open.startTime)
-  const decodeMs = open.firstTokenTime !== null
-    ? Math.max(0, record.time - open.firstTokenTime)
-    : null
+  const messageTime = fold.messageTime
+  if (messageTime === null) throw new Error('token-usage: stashed record without a stamped message time')
+  const llmMs = stepTimingLlmMs(fold)
+  if (llmMs === null) throw new Error('token-usage: stashed record without a stamped message time')
   return {
-    time: record.time,
-    date: dayKey(record.time),
+    time: messageTime,
+    date: dayKey(messageTime),
     sessionId: String(session.id),
-    provider: record.provider,
-    model: record.model,
-    turn: open.turn,
-    step: open.step,
-    uncachedInputTokens: record.usage.inputTokens,
-    outputTokens,
-    cacheReadTokens: record.usage.cacheReadTokens ?? 0,
-    cacheWriteTokens: record.usage.cacheWriteTokens ?? 0,
-    reasoningTokens: typeof record.usage.reasoningTokens === 'number' ? record.usage.reasoningTokens : null,
-    ttftMs,
+    provider: stash.provider,
+    model: stash.model,
+    turn: fold.turn,
+    step: fold.step,
+    uncachedInputTokens: stash.usage.inputTokens,
+    outputTokens: typeof stash.usage.outputTokens === 'number' ? stash.usage.outputTokens : 0,
+    cacheReadTokens: stash.usage.cacheReadTokens ?? 0,
+    cacheWriteTokens: stash.usage.cacheWriteTokens ?? 0,
+    reasoningTokens: typeof stash.usage.reasoningTokens === 'number' ? stash.usage.reasoningTokens : null,
+    ttftMs: stepTimingTtftMs(fold),
     llmMs,
-    toolMs: open.toolMs,
-    decodeMs,
+    toolMs: fold.toolMs,
+    decodeMs: stepTimingDecodeMs(fold),
   }
 }

@@ -38,6 +38,8 @@ Each package provides one primitive; open a package page for how to use it.
 | [`output-retention/`](output-retention/README.md) | Bounds model-facing output and reports exact omission metadata |
 | [`time/`](time/README.md) | Validates and canonicalizes a caller-reported IANA time zone |
 | [`timeout/`](timeout/README.md) | Deadline arithmetic, signal fusion, and timeout-versus-cancel classification |
+| [`zoned-time/`](zoned-time/README.md) | Resolves local wall-clock values to exact epoch instants |
+| [`step-timing/`](step-timing/README.md) | Folds one agent-loop step's timing boundaries into durations |
 
 -----
 

@@ -129,7 +129,7 @@ interface TokenUsageDailySummary {
 
 ## Cordis API
 
-Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — this section is byte-identical in both language sides of the page. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
 <a id="ctxtokenusagestore--tokenusagestore"></a>
 
@@ -178,5 +178,5 @@ dailySummaryRange(startDate: string, endDate: string, timeZone: string): TokenUs
 purge(before: number): number
 ```
 
-Source: [`packages/session/token-usage/src/types.ts:157`](../../packages/session/token-usage/src/types.ts)
+Source: [`packages/session/token-usage/src/types.ts`](../../packages/session/token-usage/src/types.ts)
 <!-- END GENERATED cordis-surface -->

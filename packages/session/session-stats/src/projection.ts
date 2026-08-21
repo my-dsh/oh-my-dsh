@@ -10,13 +10,15 @@
  * max-tokens usage-host messages (empty content, excluded from the surface)
  * and undercount cancelled steps (aborted before the message assembles).
  *
- * The wall-time folds mirror the client window fold field by field
- * (`deriveStats` in dsh-client-ui-conversation, that fold's whole-window
- * fallback role): model time is `step/start` → `assistant/message`, first
- * token is the first non-empty delta chunk and survives an in-step
- * `llm/retry`, decode spans first token → assembled message on steps that
- * also report output tokens, and tool time pairs `tool/call` → `tool/result`
- * by callId. A cancelled step assembles no message, so its partial stream
+ * The wall-time boundaries come from the shared `step-timing` fold, which
+ * mirrors the client window fold field by field (`deriveStats` in
+ * dsh-client-ui-conversation, that fold's whole-window fallback role): model
+ * time is `step/start` → `assistant/message`, first token is the first
+ * non-empty delta chunk and survives an in-step `llm/retry`, decode spans
+ * first token → assembled message on steps that also report output tokens,
+ * and tool time pairs `tool/call` → `tool/result` by callId. The open fold
+ * stays open until `step/end` so tool results landing after the message
+ * still accrue; a cancelled step assembles no message, so its partial stream
  * time stays uncounted in every time figure — matching the window, which
  * renders it as an untimed interrupted node.
  *
@@ -26,6 +28,18 @@
 import { z } from 'zod'
 import type { StreamChunk } from '@deepseek-ai/dsh-llm/types'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
+import type { StepTimingFold } from '@deepseek-ai/dsh-step-timing'
+import {
+  stepTimingDecodeMs,
+  stepTimingLlmMs,
+  stepTimingOnMessage,
+  stepTimingOnToken,
+  stepTimingOnToolCall,
+  stepTimingOnToolResult,
+  stepTimingOpen,
+  stepTimingTtftMs,
+  stepTimingWithoutPendingCalls,
+} from '@deepseek-ai/dsh-step-timing'
 
 /* jscpd:ignore-start -- Session Stats owns its whole-log timing projection independently. */
 
@@ -65,18 +79,16 @@ interface SessionStatsTotals {
 }
 
 /**
- * Fold state: the totals plus the in-flight boundaries they accrue from.
- * Turn numbers are host-assigned and monotonic per session, so a single
+ * Fold state: the totals plus the open step's shared timing fold. Turn
+ * numbers are host-assigned and monotonic per session, so a single
  * `lastTurn` slot decides "first closed step of a new turn"; the state is
  * plain JSON per the unit contract (persisted-cache precondition).
  */
 interface SessionStatsState extends SessionStatsTotals {
   /** Turn of the last counted `step/end`; null before the first. */
   lastTurn: number | null
-  /** The open step's boundary facts; null outside a step or after its message assembled. */
-  openStep: { turn: number; step: number; startTime: number; firstTokenTime: number | null } | null
-  /** Dispatch times of tool calls whose result has not landed, by callId. */
-  pendingCalls: Record<string, number>
+  /** The open step's timing fold; null outside a step. It closes at `step/end`. */
+  openStep: StepTimingFold | null
 }
 
 declare module '@deepseek-ai/dsh-session-projection/types' {
@@ -96,21 +108,26 @@ const sessionStatsSchema = z.object({
   decodeTokens: z.number().nonnegative(),
 }).strict()
 
+/** The persisted shape of one open step's timing fold (the unit's input boundary). */
+const openStepSchema = z.object({
+  turn: z.number().int().nonnegative(),
+  step: z.number().int().nonnegative(),
+  startTime: z.number().nonnegative(),
+  firstTokenTime: z.number().nonnegative().nullable(),
+  toolMs: z.number().nonnegative(),
+  pendingCalls: z.record(z.string(), z.number().nonnegative()),
+  messageTime: z.number().nonnegative().nullable(),
+})
+
 /**
- * The fold state's shape (totals plus in-flight boundaries), validated on
+ * The fold state's shape (totals plus the open timing fold), validated on
  * persisted-cache rows after their `ver` gate — the unit's input boundary.
  * The view is a strict subset of the state, so this schema extends
  * `sessionStatsSchema` (the wire output boundary) with the boundary fields.
  */
 const sessionStatsStateSchema = sessionStatsSchema.extend({
   lastTurn: z.number().int().nonnegative().nullable(),
-  openStep: z.object({
-    turn: z.number().int().nonnegative(),
-    step: z.number().int().nonnegative(),
-    startTime: z.number().nonnegative(),
-    firstTokenTime: z.number().nonnegative().nullable(),
-  }).nullable(),
-  pendingCalls: z.record(z.string(), z.number().nonnegative()),
+  openStep: openStepSchema.nullable(),
 })
 
 /**
@@ -128,7 +145,7 @@ function usageOutputTokens(usage: unknown): number | null {
 /** The `sessionStats` unit registered on `ctx.sessionProjections` (exported for the unit spec). */
 export const sessionStatsProjectionDefinition = {
   key: 'sessionStats',
-  stateVersion: 1,
+  stateVersion: 2,
   stateSchema: sessionStatsStateSchema,
   init: () => ({
     turns: 0,
@@ -141,7 +158,6 @@ export const sessionStatsProjectionDefinition = {
     decodeTokens: 0,
     lastTurn: null,
     openStep: null,
-    pendingCalls: {},
   }),
   apply: (state, event) => {
     // Every uninteresting event returns the same reference (Object.is gates the change feed).
@@ -149,49 +165,58 @@ export const sessionStatsProjectionDefinition = {
       case 'step/start':
         return {
           ...state,
-          openStep: { turn: event.data.turn, step: event.data.step, startTime: event.time, firstTokenTime: null },
+          openStep: stepTimingOpen(event.data.turn, event.data.step, event.time),
         }
       case 'assistant/chunk': {
         const open = state.openStep
         if (open === null || open.turn !== event.data.turn || open.step !== event.data.step) return state
-        if (open.firstTokenTime !== null || !isTokenDelta(event.data.chunk)) return state
-        return { ...state, openStep: { ...open, firstTokenTime: event.time } }
+        const stamped = stepTimingOnToken(open, event.time, isTokenDelta(event.data.chunk))
+        if (stamped === open) return state
+        return { ...state, openStep: stamped }
+      }
+      case 'tool/call': {
+        const open = state.openStep
+        if (open === null) return state
+        return { ...state, openStep: stepTimingOnToolCall(open, event.data.callId, event.time) }
+      }
+      case 'tool/result': {
+        const open = state.openStep
+        if (open === null) return state
+        const folded = stepTimingOnToolResult(open, event.data.message.source.callId, event.time)
+        if (folded === open) return state
+        // Totals accrue at result time (the change-feed moment clients see),
+        // mirroring the fold's per-step accrual.
+        const added = folded.toolMs - open.toolMs
+        return { ...state, openStep: folded, toolMs: state.toolMs + Math.max(0, added) }
       }
       case 'assistant/message': {
         const open = state.openStep
+        // One assembled message per step: after the first stamp, a defensive
+        // duplicate folds to the identical reference.
         if (open === null || open.turn !== event.data.turn || open.step !== event.data.step) return state
-        // One assembled message per step: closing the boundary means a
-        // defensive duplicate cannot accrue twice.
-        const next: SessionStatsState = {
+        const next = stepTimingOnMessage(open, event.time)
+        if (next === open) return state
+        const llmMs = stepTimingLlmMs(next)
+        if (llmMs === null) return state
+        const updated: SessionStatsState = {
           ...state,
-          llmMs: state.llmMs + Math.max(0, event.time - open.startTime),
-          openStep: null,
+          openStep: next,
+          llmMs: state.llmMs + llmMs,
         }
-        if (open.firstTokenTime !== null) {
-          next.ttftMs += Math.max(0, open.firstTokenTime - open.startTime)
-          next.ttftSteps += 1
+        const ttftMs = stepTimingTtftMs(next)
+        if (ttftMs !== null) {
+          updated.ttftMs += ttftMs
+          updated.ttftSteps += 1
           const outputTokens = usageOutputTokens(event.data.usage)
           if (outputTokens !== null) {
-            next.decodeMs += Math.max(0, event.time - open.firstTokenTime)
-            next.decodeTokens += outputTokens
+            const decodeMs = stepTimingDecodeMs(next)
+            if (decodeMs !== null) {
+              updated.decodeMs += decodeMs
+              updated.decodeTokens += outputTokens
+            }
           }
         }
-        return next
-      }
-      case 'tool/call':
-        return { ...state, pendingCalls: { ...state.pendingCalls, [event.data.callId]: event.time } }
-      case 'tool/result': {
-        // Own-key check: callId is provider-minted (model/tool JSON boundary),
-        // so a prototype property name ('constructor', 'toString') on a result
-        // with no recorded call must read as unmatched, not as an inherited
-        // function that would poison toolMs with NaN.
-        const callId = event.data.message.source.callId
-        const dispatched = Object.hasOwn(state.pendingCalls, callId) ? state.pendingCalls[callId] : undefined
-        if (dispatched === undefined) return state
-        const pendingCalls = Object.fromEntries(
-          Object.entries(state.pendingCalls).filter(([id]) => id !== callId),
-        )
-        return { ...state, toolMs: state.toolMs + Math.max(0, event.time - dispatched), pendingCalls }
+        return updated
       }
       case 'step/end':
         return {
@@ -201,11 +226,16 @@ export const sessionStatsProjectionDefinition = {
           lastTurn: event.data.turn,
           openStep: null,
         }
-      case 'turn/end':
+      case 'turn/end': {
         // A call whose result never landed belongs to a cancelled or failed
         // turn; results always land within their turn, so drop the leftovers
         // instead of growing persisted state forever.
-        return Object.keys(state.pendingCalls).length === 0 ? state : { ...state, pendingCalls: {} }
+        const open = state.openStep
+        if (open === null) return state
+        const pruned = stepTimingWithoutPendingCalls(open)
+        if (pruned === open) return state
+        return { ...state, openStep: pruned }
+      }
       default:
         return state
     }

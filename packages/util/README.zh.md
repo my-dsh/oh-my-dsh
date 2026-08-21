@@ -38,6 +38,8 @@ kind: "package-group"
 | [`output-retention/`](output-retention/README.zh.md) | 限制面向模型的输出并报告精确的省略元数据 |
 | [`time/`](time/README.zh.md) | 校验并规范化调用方所报的 IANA 时区 |
 | [`timeout/`](timeout/README.zh.md) | 截止时间运算、信号融合与超时/取消分类 |
+| [`zoned-time/`](zoned-time/README.zh.md) | 把本地墙钟值解析为精确 epoch 瞬时 |
+| [`step-timing/`](step-timing/README.zh.md) | 把一个 agent-loop 步骤的计时边界折叠为时长 |
 
 -----
 

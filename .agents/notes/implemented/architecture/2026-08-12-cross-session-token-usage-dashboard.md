@@ -26,13 +26,13 @@ The feature splits into three packages, each following the repo's capability-sea
 
 ### SQLite store with independent database
 
-The store owns its own SQLite database file (not shared with session-persistence or session-query), with a monotonic `SCHEMA_VERSION = 2` and application id `0x44535455` ('DSTU'). This isolation means the store's schema evolution never couples to session persistence or any other SQLite consumer.
+The store owns its own SQLite database file (not shared with session-persistence or session-query), with a monotonic `SCHEMA_VERSION = 3` and application id `0x44535455` ('DSTU'). This isolation means the store's schema evolution never couples to session persistence or any other SQLite consumer.
 
-The `token_usage_events` table stores one row per (session, turn, step) with a `PRIMARY KEY (session_id, turn, step)` and an index on `(date, provider, model)`. The `INSERT ... ON CONFLICT DO UPDATE` pattern means re-appending a record for the same (session, turn, step) replaces rather than duplicates — the host's session-event replay semantics already guarantee idempotent event delivery. Summary reads bound the query by each record's exact epoch `time` window in the caller-supplied time zone (`dailySummary(date, timeZone)`) rather than by the append-time `date` key, so they scan the small table without using the `date` index; a `time` index is deferred until a deployment demonstrates growth that warrants it.
+The `token_usage_events` table stores one row per (session, turn, step) with a `PRIMARY KEY (session_id, turn, step)` and an index on `(time)`. The `INSERT ... ON CONFLICT DO UPDATE` pattern means re-appending a record for the same (session, turn, step) replaces rather than duplicates — the host's session-event replay semantics already guarantee idempotent event delivery. Summary reads bound the query by each record's exact epoch `time` window in the caller-supplied time zone (`dailySummary(date, timeZone)`) rather than by the append-time `date` key; the `(time)` index serves those reads and `purge`, and the `date` column remains write-only metadata.
 
-### Session-event listener mirrors session-stats projection timing
+### Session-event listener folds step timing through the shared primitive
 
-The listener attaches to `ctx.on('session/event')` and tracks open (turn, step) state per session via a WeakMap. It captures `step/start` → first `assistant/chunk` (for TTFT timing) → `assistant/message` (for usage + provider/model join). This is the same timing fold as `session-stats`'s projection: the first assistant/message with a `usage` field is the single join point where token buckets and route identity co-exist.
+The listener attaches to `ctx.on('session/event')` and tracks open (turn, step) state per session via a WeakMap. It captures `step/start` → first `assistant/chunk` (for TTFT timing) → `assistant/message` (for usage + provider/model join). The timing boundaries come from the shared `@deepseek-ai/dsh-step-timing` fold — the same primitives `session-stats`'s projection consumes — and the first assistant/message with a `usage` field is the single join point where token buckets and route identity co-exist.
 
 The `append()` call is fail-contained: it catches write errors and logs a warning, never propagating into the cordis `session/event` dispatch (which is stop-on-throw).
 
@@ -78,5 +78,5 @@ The connection fixture (`fixture.ts`) returns an empty daily summary (no per-gro
 - Token consumption is queryable cross-session without scanning logs. The append-time hot path costs one synchronous SQLite insert per successful model call.
 - The independent database means the token-usage store can be backed up, purged, or moved independently. The `tokenUsage.purge(before?)` method handles retention.
 - The client panel composes into every screen via `shell.overlay` without owning a layout region. It fetches on demand and shows nothing until the user clicks the FAB.
-- Day bucketing follows the caller's time zone: the writer keys each row's `date` in its own local zone, and summary reads re-bucket by the caller-supplied `timeZone` through each record's exact epoch `time` window, so the requested calendar day is authoritative regardless of the writer's zone. These reads scan the small table without an index, an accepted tradeoff until a deployment demonstrates growth.
+- Day bucketing follows the caller's time zone: the writer keys each row's `date` in its own local zone, and summary reads re-bucket by the caller-supplied `timeZone` through each record's exact epoch `time` window, so the requested calendar day is authoritative regardless of the writer's zone. The `(time)` index serves those reads and purge.
 - The feature is opt-in at the profile level via the `token-usage-dashboard` bundle. The default `dsh web` composition includes it via the web-app bundle's patch.

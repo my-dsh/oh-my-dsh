@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-20-shared-step-timing-fold.md
+2026-08-20-shared-step-timing-fold.md: 9bb8a848aea97e409cafff75e6cccfc7c4e699fe
+2026-08-20-shared-step-timing-fold.zh.md: 334a16a313c3627503819d4f5839cd2a0ed7c246

@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-跨会话 token 用量持久化：一个由 SQLite 支撑的 `TokenUsageStore` Service Definition，从 session 事件流捕获按请求的提供方上报用量，用于按日、按 (provider, model) 聚合。捕获侧与 `session-stats` 的计时折叠一致（`step/start` → 首个 token chunk → `assistant/message`），因此 TTFT 与 decode 时长与会话作用域投影一致，并通过组装完成的消息的 `source` 关联路由（provider/model 随 usage 一起出现在 `assistant/message` 上）。
+跨会话 token 用量持久化：一个由 SQLite 支撑的 `TokenUsageStore` Service Definition，从 session 事件流捕获按请求的提供方上报用量，用于按日、按 (provider, model) 聚合。捕获侧经由共享的 `@deepseek-ai/dsh-step-timing` 原语折叠步骤边界（`step/start` → 首个 token chunk → `assistant/message`）——与 `session-stats` 消费的是同一组原语，因此 TTFT 与 decode 时长与会话作用域投影一致——并通过组装完成的消息的 `source` 关联路由（provider/model 随 usage 一起出现在 `assistant/message` 上）。
 
 ## 组合方式
 
@@ -38,7 +38,7 @@
 
 ## Schema 版本
 
-数据库携带自己的单调 `SCHEMA_VERSION`（当前为 2），与 session 持久化 schema 相互独立。空数据库初始化到当前版本；其他任何版本一律拒绝而非就地迁移（预发布立场：后端拒绝旧磁盘格式）。`(date, provider, model)` 索引服务于写入时的 `date` 列；汇总读取以 epoch `time` 窗口界定较小的表并无索引扫描。
+数据库携带自己的单调 `SCHEMA_VERSION`（当前为 3），与 session 持久化 schema 相互独立。空数据库初始化到当前版本；其他任何版本一律拒绝而非就地迁移（预发布立场：后端拒绝旧磁盘格式）。`(time)` 索引同时服务于汇总读取与 `purge`——两者都按 epoch `time` 界定行集；写入时的 `date` 列保持为只写元数据。
 
 ## 模型体验
 
@@ -50,5 +50,5 @@
 
 ## 已知限制与暂缓事项
 
-- **按调用方时区分桶、全表扫描读取**——写入方按自身本地时区为每行写入 `date` 键，汇总读取则按调用方提交的 `timeZone` 以 epoch `time` 窗口重新分桶，而非信任写入的 `date`。这些读取无索引地扫描表；存储的数据量很小，因此在某个部署证明增长需要 `time` 索引之前，接受这一取舍。
+- **`date` 列只写不读**——写入方按自身本地时区为每行写入 `date` 键，但所有读取与 purge 都按调用方时区的 epoch `time` 窗口界定行集，已发布的查询从不使用该列；删除它留待下一次破坏性 schema 变更。
 - **无保留策略**——store 从不自动删除；增长由 `purge()` 调用约束。自动每日保留推迟到某个部署提出容量要求后再实现。
