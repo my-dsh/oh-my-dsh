@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
+import { DatabaseSync } from 'node:sqlite'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { openTokenUsageDatabase, SqliteTokenUsageStore, TOKEN_USAGE_APPLICATION_ID } from '../src/store.ts'
+import { openTokenUsageDatabase, SqliteTokenUsageStore, TOKEN_USAGE_APPLICATION_ID, TOKEN_USAGE_SCHEMA_VERSION } from '../src/store.ts'
 import type { TokenUsageEventRecord } from '../src/types.ts'
 
 const dirs: string[] = []
@@ -116,6 +117,51 @@ describe('SqliteTokenUsageStore', () => {
     const db = openTokenUsageDatabase(path)
     const { application_id } = db.prepare('PRAGMA application_id').get() as { application_id: number }
     expect(application_id).toBe(TOKEN_USAGE_APPLICATION_ID)
+    db.close()
+  })
+
+  it('stamps the current schema version on a fresh database', async () => {
+    const path = await freshDbPath()
+    openTokenUsageDatabase(path).close()
+    const db = openTokenUsageDatabase(path)
+    const { user_version } = db.prepare('PRAGMA user_version').get() as { user_version: number }
+    expect(user_version).toBe(TOKEN_USAGE_SCHEMA_VERSION)
+    db.close()
+  })
+
+  it('rejects reopening a database written by another schema version', async () => {
+    const path = await freshDbPath()
+    openTokenUsageDatabase(path).close()
+    const stale = new DatabaseSync(path)
+    stale.exec(`PRAGMA user_version = ${TOKEN_USAGE_SCHEMA_VERSION - 1}`)
+    stale.close()
+    expect(() => openTokenUsageDatabase(path)).toThrow('incompatible with this build')
+  })
+
+  it('rejects an unversioned database that already carries tables', async () => {
+    const path = await freshDbPath()
+    const foreign = new DatabaseSync(path)
+    foreign.exec('CREATE TABLE unrelated (id INTEGER)')
+    foreign.close()
+    expect(() => openTokenUsageDatabase(path)).toThrow('unversioned schema or application identity')
+  })
+
+  it('creates the time index and serves summary reads through it', async () => {
+    const path = await freshDbPath()
+    const db = openTokenUsageDatabase(path)
+    const names = (
+      db.prepare(
+        "SELECT name FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'token_usage_events' ORDER BY name",
+      ).all() as { name: string }[]
+    ).map(row => row.name)
+    expect(names).toContain('idx_token_usage_time')
+    expect(names).not.toContain('idx_token_usage_date_provider_model')
+
+    // The day-window read plan must range-scan the time index, not scan the table.
+    const plan = db.prepare(
+      'EXPLAIN QUERY PLAN SELECT provider FROM token_usage_events WHERE time >= ? AND time < ? GROUP BY provider, model',
+    ).all(0, 1) as { detail: string }[]
+    expect(plan.some(row => row.detail.includes('idx_token_usage_time'))).toBe(true)
     db.close()
   })
 

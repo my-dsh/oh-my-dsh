@@ -25,6 +25,9 @@
     },
     {
       "path": "../session-projection"
+    },
+    {
+      "path": "../../util/step-timing"
     }
   ]
 }

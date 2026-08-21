@@ -12,3 +12,5 @@
 | [`retention/`](output-retention/README.zh.md) | 限制保留文本和项集合的大小 |
 | [`atomic-write/`](atomic-write/README.zh.md) | 以原子方式替换文件 |
 | [`native-command/`](native-command/README.zh.md) | 不经 shell 运行宿主原生命令 |
+| [`zoned-time/`](zoned-time/README.zh.md) | 把本地墙钟值解析为精确 epoch 瞬时 |
+| [`step-timing/`](step-timing/README.zh.md) | 把一个 agent-loop 步骤的计时边界折叠为时长 |
