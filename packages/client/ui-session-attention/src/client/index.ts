@@ -1,0 +1,47 @@
+/**
+ * Session-attention overlay plugin, browser half: one entry contributed to the
+ * root-scoped `shell.overlay` list slot (owned and declared by ui-layout). The
+ * entry watches the standard `useSessions` feed (the same data the sidebar
+ * status dots use) and renders a persistent 3D animation panel while any
+ * session awaits the user's action (approval / plan review / question) or a
+ * background session's AI reply finished unopened. There is no host half and
+ * no locale namespace of its own; copy rides injected defaults.
+ *
+ * Export discipline: packages/client/AGENTS.md.
+ */
+import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+// Type-only: pulls the shell.overlay SlotMap declaration (the key's owner)
+// into this program so the overlay registration below typechecks against the
+// real declaration — no runtime edge to ui-layout.
+import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+import { AttentionPanel } from './AttentionPanel.tsx'
+import type { SessionAttentionInjected } from './contract/slots.ts'
+
+export type { SessionAttentionInjected } from './contract/slots.ts'
+export type { AttentionKind, AttentionRow } from './attention.ts'
+export type { Translate, AttentionPanelProps } from './AttentionPanel.tsx'
+
+/** Services required by the session-attention plugin: the slot registry only. */
+export const inject = ['slots']
+
+/**
+ * Client plugin body: contribute the attention entry to the shell overlay once
+ * its declarer is up. The open-session action is built here from the runtime
+ * `sessions` service so the component never reaches for ctx.
+ * @param ctx - client root context.
+ */
+export function apply(ctx: ClientContext): void {
+  const injected = (): SessionAttentionInjected => ({
+    openSession: (id) => {
+      const sessions = ctx.get('sessions')
+      if (sessions !== undefined) sessions.open(id as never)
+    },
+  })
+
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay',
+    id: 'session-attention-3d',
+    order: 80,
+    inject: injected,
+  }, AttentionPanel))
+}
