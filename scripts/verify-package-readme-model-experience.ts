@@ -72,6 +72,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'packages/experimental/inspector': { kind: 'none', reason: 'Developer diagnostics transport; it observes runtime activity without changing model requests.' },
   'packages/client/ui-slots': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/ui-attachment': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
+  'packages/client/ui-session-attention': { kind: 'none', reason: 'Browser-side presentation overlay over the session list; registers nothing model-facing.' },
   'packages/client/ui-primitives': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/store': { kind: 'none', reason: 'Browser-side state primitives; register nothing model-facing.' },
   'packages/client/ui-renderer': { kind: 'none', reason: 'Browser-side render assembly; registers nothing model-facing.' },

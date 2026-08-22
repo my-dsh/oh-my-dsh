@@ -305,6 +305,12 @@
     - id: ui-trajectory
       name: '@deepseek-ai/dsh-client-ui-trajectory'
 
+    # Session attention overlay: a persistent 3D animation panel in
+    # shell.overlay while any session awaits the user's action (approval / plan
+    # review / question) or a background session's reply finished unopened.
+    - id: ui-session-attention
+      name: '@deepseek-ai/dsh-client-ui-session-attention'
+
 # ── the agent plane moves behind agent presets ─────────────────────────────
 #
 # Every row below composes what ONE agent contributes to the host registries:
