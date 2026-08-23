@@ -42,7 +42,7 @@ describe('selectAttention', () => {
     expect(selectAttention(s).map(r => r.kind)).toEqual(['approval', 'plan-review'])
   })
 
-  it('surfaces completed background sessions but not the current one', () => {
+  it('surfaces completed sessions including the currently-open one', () => {
     const s = state(
       ['a', 'b', 'c'],
       {
@@ -52,8 +52,8 @@ describe('selectAttention', () => {
       },
       'b',
     )
-    // b is current → excluded; a and c are completed background.
-    expect(selectAttention(s).map(r => r.id).sort()).toEqual(['a', 'c'])
+    // b is current → still surfaced; clicking its row re-selects and consumes it.
+    expect(selectAttention(s).map(r => r.id).sort()).toEqual(['a', 'b', 'c'])
   })
 
   it('pending interaction outranks completed for the same session', () => {

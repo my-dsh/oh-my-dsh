@@ -5,8 +5,8 @@
  * Two attention kinds mirror the sidebar's status dots:
  *  - a `pendingInteraction` (approval / plan-review / question) — the amber
  *    "waiting for the user" dot;
- *  - a `completed` background session (finished running while not selected and
- *    not yet opened) — the green "done" reminder dot.
+ *  - a `completed` session (finished running and not opened since) — the
+ *    green "done" reminder dot.
  *
  * The selector returns a plain, sorted array so a snapshot selector hook can
  * compare two derivations by value (see {@link attentionRowsKey}) without
@@ -43,10 +43,10 @@ export const KIND_PRIORITY: Readonly<Record<AttentionKind, number>> = {
 }
 
 /**
- * Derive the attention rows from one session list snapshot. Blank sessions and
- * the currently-open session never surface: a blank row is a provisional New
- * Session that cannot await anything, and the current session is the one the
- * user is already looking at (its reply completion is in-view, not a reminder).
+ * Derive the attention rows from one session list snapshot. Blank sessions
+ * never surface: a blank row is a provisional New Session that cannot await
+ * anything. The currently-open session surfaces like any other when its reply
+ * completes.
  * @param state - the useSessions snapshot.
  * @returns the sorted attention rows.
  */
@@ -57,7 +57,7 @@ export function selectAttention(state: SessionListState): AttentionRow[] {
     if (row === undefined || row.blank) continue
     if (row.pendingInteraction !== undefined) {
       rows.push({ kind: row.pendingInteraction, id, title: row.displayTitle })
-    } else if (row.completed === true && state.current !== id) {
+    } else if (row.completed === true) {
       rows.push({ kind: 'completed', id, title: row.displayTitle })
     }
   }

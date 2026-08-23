@@ -99,9 +99,9 @@ export class SessionManager {
   /** Latest transient queues, retained independently of Session object materialization. */
   private readonly queues = new Map<SessionId, readonly SessionQueuedItem[]>()
   /**
-   * Sessions that finished running while not selected — the sidebar's green
-   * "done" reminder (manager-owned, survives connection generations; cleared
-   * on select and session-removed, re-armed by the next completion).
+   * Sessions that finished running and were not opened since — the sidebar's
+   * green "done" reminder (manager-owned, survives connection generations;
+   * cleared on select and session-removed, re-armed by the next completion).
    */
   private readonly completedNotifications = new Set<SessionId>()
   /** Last-observed running bits per session; the true→false edge here arms {@link completedNotifications}. */
@@ -878,10 +878,10 @@ export class SessionManager {
   /**
    * Reconcile completion reminders against the latest summaries, eagerly after
    * every mutation and pull (a snapshot-build-time pass would collapse
-   * consecutive status frames into one observation). A running→idle edge of a
-   * non-selected session arms its reminder; running disarms it; removal drops
-   * it. First observation only records the running bit — sessions already
-   * idle at load get no reminder.
+   * consecutive status frames into one observation). A running→idle edge arms
+   * the session's reminder whether or not it is selected; running disarms it;
+   * removal drops it. First observation only records the running bit — sessions
+   * already idle at load get no reminder.
    */
   private syncCompletedNotifications(): void {
     const seen = new Set<SessionId>()
@@ -893,7 +893,7 @@ export class SessionManager {
         continue
       }
       if (prev && !s.running) {
-        if (s.sessionId !== this.selected) this.completedNotifications.add(s.sessionId)
+        this.completedNotifications.add(s.sessionId)
       } else if (s.running) {
         this.completedNotifications.delete(s.sessionId)
       }
