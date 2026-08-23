@@ -1,7 +1,7 @@
 /**
  * The session-attention overlay panel: renders continuously in `shell.overlay`
  * while any session awaits the user's action (approval / plan review / question)
- * or a background session's AI reply finished unopened. The animation is a
+ * or an AI reply finished without being opened since. The animation is a
  * self-contained Canvas2D glowing planet system (see {@link ./scene.ts}); the
  * attention rows are derived from the standard `useSessions` hook with the same
  * data the sidebar status dots use.
