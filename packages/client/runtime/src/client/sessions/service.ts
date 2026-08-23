@@ -58,7 +58,7 @@ export interface SessionSummary {
   running: boolean
   /** User interaction currently blocking this session (sidebar amber-dot state). */
   pendingInteraction?: PendingInteractionStatus
-  /** Finished while not selected and not yet opened — the sidebar's green "done" reminder. Absent = false. */
+  /** Finished running and not yet opened since — the sidebar's green "done" reminder. Absent = false. */
   completed?: boolean
   /**
    * Empty-log bit (host summary derivation mirror). New Session reuses a blank

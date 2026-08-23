@@ -1053,19 +1053,19 @@ describe('completed reminder', () => {
     expect(entry(manager, S2)?.completed).toBe(false)
   })
 
-  it('never arms for the session being watched and re-arms after a switch-away re-run', () => {
+  it('arms for the watched session too and clears only on re-select', () => {
     const manager = new SessionManager(new FakeApiClient(), fakeRemote())
     manager.handleHostEnvelope(added('h1', S1))
     manager.handleHostEnvelope(added('h2', S2))
     manager.select(S2)
     manager.handleHostEnvelope(status('s1', S2, true))
     manager.handleHostEnvelope(status('s2', S2, false))
-    expect(entry(manager, S2)?.completed).toBe(false) // watched to completion: no reminder
-    // Switch away; a fresh run completing again arms the reminder.
+    expect(entry(manager, S2)?.completed).toBe(true) // watched to completion: still a reminder
+    // Switching away keeps the reminder until the session is opened again.
     manager.select(S1)
-    manager.handleHostEnvelope(status('s3', S2, true))
-    manager.handleHostEnvelope(status('s4', S2, false))
     expect(entry(manager, S2)?.completed).toBe(true)
+    manager.select(S2)
+    expect(entry(manager, S2)?.completed).toBe(false)
   })
 
   it('a re-run disarms the reminder while running and re-arms on its completion', () => {
