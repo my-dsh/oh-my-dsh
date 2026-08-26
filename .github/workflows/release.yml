@@ -67,6 +67,7 @@ jobs:
         run: pnpm run verify-npm-install-layout
 
   pack:
+    if: github.repository == 'deepseek-ai/deepseek-harness'
     name: Pack npm tarballs
     runs-on: ubuntu-24.04
     steps:
