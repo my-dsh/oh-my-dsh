@@ -52,7 +52,7 @@ export interface AttentionPanelProps {
   /** Optional scene environment override (tests). */
   env?: SceneEnv
   /** Optional scene factory override (tests); defaults to {@link createAttentionScene}. */
-  createScene?: (canvas: HTMLCanvasElement, accent: string, env: SceneEnv) => SceneDisposer
+  createScene?: (canvas: HTMLCanvasElement, kind: AttentionKind, env: SceneEnv) => SceneDisposer
 }
 
 /** Maximum rows shown before a "+N more" tail. */
@@ -69,7 +69,7 @@ export function AttentionPanel({ useSessions, openSession, t, env, createScene }
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const first = count > 0 ? rows[0] : undefined
-  const accent = first !== undefined ? KIND_META[first.kind].color : '#f59e0b'
+  const kind = first !== undefined ? first.kind : 'approval'
   const completed = isAllCompleted(rows)
 
   // Tag the browser tab title with the pending count while attention is owed.
@@ -103,12 +103,12 @@ export function AttentionPanel({ useSessions, openSession, t, env, createScene }
     /* v8 ignore next -- defensive initializer; reassigned in both try and catch */
     let dispose: SceneDisposer = () => {}
     try {
-      dispose = factory(canvas, accent, sceneEnv)
+      dispose = factory(canvas, kind, sceneEnv)
     } catch {
       dispose = () => {}
     }
     return () => { dispose() }
-  }, [count > 0, accent, env, createScene])
+  }, [count > 0, kind, env, createScene])
 
   if (count === 0) return <></>
 
