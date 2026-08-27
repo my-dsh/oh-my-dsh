@@ -6,8 +6,8 @@ import {
   type AttentionKind, type AttentionRow,
 } from '../src/client/attention.ts'
 import {
-  SCENE_COMET_TRAIL, SCENE_FOCAL, SCENE_HEIGHT, SCENE_RING_POINTS, SCENE_WIDTH,
-  buildFallbackPoints, computeFrame, depthAlpha, depthRadius, projectPoint,
+  SCENE_FOCAL, SCENE_HEIGHT, SCENE_WIDTH,
+  buildFallbackPoints, computeScene, depthAlpha, depthRadius, projectPoint,
 } from '../src/client/scene.ts'
 
 function summary(id: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
@@ -118,8 +118,7 @@ describe('attention keys', () => {
 
 describe('scene projection math', () => {
   it('buildFallbackPoints emits the requested count on the shell radius range', () => {
-    const rand = (() => 0.5)
-    const pts = buildFallbackPoints(3, 10, 20, rand)
+    const pts = buildFallbackPoints(3, 10, 20)
     expect(pts).toHaveLength(3)
     for (const p of pts) {
       expect(p.r).toBeGreaterThanOrEqual(10)
@@ -152,22 +151,31 @@ describe('scene projection math', () => {
     expect(depthRadius(1000, SCENE_FOCAL)).toBeGreaterThanOrEqual(1.0)
   })
 
-  it('computeFrame composes shell + ring + comet under a breathing halo', () => {
-    const pts = buildFallbackPoints(5, 46, 68, (() => 0.2))
-    const frame = computeFrame(pts, 1.5, SCENE_WIDTH, SCENE_HEIGHT, SCENE_FOCAL)
-    expect(frame.clear).toBe(true)
-    // Every shell particle plus every ring dot plus the comet trail draws.
-    expect(frame.points).toHaveLength(5 + SCENE_RING_POINTS + SCENE_COMET_TRAIL)
-    for (const p of frame.points) {
-      expect(p).toBeDefined()
-      expect(p.alpha).toBeGreaterThanOrEqual(0)
-      expect(p.alpha).toBeLessThanOrEqual(1)
-      // The ring's 1.5× glow scale is the smallest multiplier above the 1.0 depth floor.
-      expect(p.radius).toBeGreaterThanOrEqual(1.0 * 1.5)
+  it('computeScene renders a distinct, valid scene for every attention kind', () => {
+    const kinds = ['approval', 'plan-review', 'question', 'completed'] as const
+    const frames = kinds.map(k => computeScene(k, 1.5, SCENE_WIDTH, SCENE_HEIGHT, SCENE_FOCAL))
+    for (const frame of frames) {
+      expect(frame.clear).toBe(true)
+      expect(frame.points.length).toBeGreaterThan(0)
+      for (const p of frame.points) {
+        expect(p.alpha).toBeGreaterThanOrEqual(0)
+        expect(p.alpha).toBeLessThanOrEqual(1)
+        expect(p.radius).toBeGreaterThan(0)
+      }
+      // The halo always breathes within its designed band.
+      expect(frame.halo.radius).toBeGreaterThan(0)
+      expect(frame.halo.alpha).toBeGreaterThan(0)
+      expect(frame.halo.alpha).toBeLessThan(0.1)
     }
-    // The halo breathes within its designed band.
-    expect(frame.halo.radius).toBeGreaterThan(0)
-    expect(frame.halo.alpha).toBeGreaterThan(0)
-    expect(frame.halo.alpha).toBeLessThan(0.1)
+    // Each kind yields a recognizably different scene (distinct point counts).
+    const uniqueCounts = new Set(frames.map(f => f.points.length))
+    expect(uniqueCounts.size).toBe(kinds.length)
+  })
+
+  it('computeScene approval keeps the brightest particle alpha at most 1', () => {
+    const frame = computeScene('approval', 0, SCENE_WIDTH, SCENE_HEIGHT, SCENE_FOCAL)
+    for (const p of frame.points) {
+      expect(p.alpha).toBeLessThanOrEqual(1)
+    }
   })
 })

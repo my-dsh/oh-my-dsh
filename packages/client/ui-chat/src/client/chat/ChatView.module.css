@@ -77,13 +77,15 @@
 /* Selection still sets data-selected for details linkage; no outline —
    tool rows match Think chrome (no selected ring). */
 
-/* Turn activity keeps the former loader's one-line footprint. A pale
-   brand-blue band sweeps from left to right; reduced-motion keeps it static. */
+/* Turn activity keeps the former loader's one-line footprint. The text stays
+   solid and always-readable; a leading brand-blue dot softly pulses to carry
+   the live signal. reduced-motion keeps the dot static. */
 .turnStatus {
   align-self: flex-start;
   flex: none;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   height: calc(26px + var(--dsh-content-font-delta, 0px));
   font: var(--dsw-font-s-strong-14);
   /* The status line reads at the body size: the fixed 14 token supplies the
@@ -94,44 +96,36 @@
   font-size: var(--dsh-content-font-size, 14px);
   line-height: calc(22px + var(--dsh-content-font-delta, 0px));
   white-space: nowrap;
-  background: linear-gradient(
-    90deg,
-    var(--dsw-static-deepseek-500) 0%,
-    var(--dsw-static-deepseek-500) 40%,
-    var(--dsw-static-deepseek-200) 50%,
-    var(--dsw-static-deepseek-500) 60%,
-    var(--dsw-static-deepseek-500) 100%
-  );
-  background-position: 100% 0;
-  background-size: 250% 100%;
-  background-clip: text;
-  color: transparent;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: dsh-turn-status-shimmer 1.8s linear infinite;
+  color: var(--dsw-static-deepseek-500);
+}
+
+.turnStatus::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dsw-static-deepseek-500);
+  animation: dsh-turn-status-dot 1.2s ease-in-out infinite;
 }
 
 .turnStatusClock {
-  margin-left: 8px;
+  margin-left: 4px;
   font: var(--dsw-font-xs-13);
   font-size: var(--dsh-content-font-size-secondary, 13px);
   line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-caption);
-  -webkit-text-fill-color: var(--dsw-alias-label-caption);
 }
 
-@keyframes dsh-turn-status-shimmer {
-  to {
-    background-position: 0 0;
-  }
+@keyframes dsh-turn-status-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.45); opacity: 0.35; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .turnStatus {
-    background-position: 0 0;
-    background-size: 100% 100%;
+  .turnStatus::before {
     animation: none;
   }
 }
