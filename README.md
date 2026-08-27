@@ -40,6 +40,18 @@ pnpm dsh web
 
 `pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
 
+## Added features
+
+This repository adds two capabilities on top of upstream DeepSeek Harness.
+
+### Token usage dashboard
+
+`@deepseek-ai/dsh-token-usage` persists provider-reported usage for every model call into a SQLite-backed store and aggregates it into daily summaries per `(provider, model)` — tokens split into uncached input, cache read, cache write, and output, plus TTFT and wall-time averages. The built-in web dashboard (`packages/bundle/token-usage-dashboard`) surfaces these as cross-session statistics in the Web GUI. See the [token-usage subsystem doc](docs/subsystems/token-usage.md).
+
+### Session attention reminders
+
+When a background session awaits the user — a pending interaction (approval / plan review / question) or a finished AI reply not yet opened — a floating overlay (`@deepseek-ai/dsh-client-ui-session-attention`) appears in the top-right of the Web GUI. It tags the tab title `(N)` and plays one of four distinct Canvas2D animations keyed by the highest-priority attention kind, so you can tell at a glance what kind of reminder is owed. See the [session-attention package](packages/client/ui-session-attention/README.md).
+
 ## Community and support
 
 - Submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
