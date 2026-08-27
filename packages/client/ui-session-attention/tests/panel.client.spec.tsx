@@ -6,6 +6,7 @@ import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-client-runtime/client'
 import { AttentionPanel } from '../src/client/AttentionPanel.tsx'
 import type { Translate } from '../src/client/AttentionPanel.tsx'
+import type { AttentionKind } from '../src/client/attention.ts'
 import { prefersReducedMotion, type SceneEnv, type SceneDisposer } from '../src/client/scene.ts'
 
 function summary(id: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
@@ -205,6 +206,43 @@ describe('AttentionPanel', () => {
     expect(factory).toHaveBeenCalledTimes(1)
     unmount()
     expect(disposed).toHaveBeenCalledOnce()
+  })
+
+  it('passes the highest-priority kind to the scene factory', () => {
+    // A plan-review row (priority 1) is the scene driver even when a lower
+    // priority question row is also present, so the animation matches the kind
+    // the user is most likely acting on.
+    const snap = state(['b', 'a'], {
+      a: summary('a', { pendingInteraction: 'question' }),
+      b: summary('b', { pendingInteraction: 'plan-review' }),
+    })
+    const factory = vi.fn((_c: HTMLCanvasElement, _k: AttentionKind, _e: SceneEnv): SceneDisposer => () => {})
+    const { unmount } = render(
+      <AttentionPanel
+        useSessions={fakeUseSessions(snap)}
+        openSession={() => {}}
+        env={noRafEnv}
+        createScene={factory}
+      />,
+    )
+    expect(factory).toHaveBeenCalledTimes(1)
+    expect(factory).toHaveBeenCalledWith(expect.any(HTMLCanvasElement), 'plan-review', expect.anything())
+    unmount()
+  })
+
+  it('starts a completed animation when only completed rows remain', () => {
+    const snap = state(['a'], { a: summary('a', { completed: true }) })
+    const factory = vi.fn((_c: HTMLCanvasElement, _k: AttentionKind, _e: SceneEnv): SceneDisposer => () => {})
+    const { unmount } = render(
+      <AttentionPanel
+        useSessions={fakeUseSessions(snap)}
+        openSession={() => {}}
+        env={noRafEnv}
+        createScene={factory}
+      />,
+    )
+    expect(factory).toHaveBeenCalledWith(expect.any(HTMLCanvasElement), 'completed', expect.anything())
+    unmount()
   })
 })
 
