@@ -22,7 +22,7 @@ describe('createAttentionScene', () => {
     }
     const caf = vi.fn()
     const env: SceneEnv = { reducedMotion: () => false, requestAnimationFrame: raf, cancelAnimationFrame: caf }
-    const dispose = createAttentionScene(newCanvas(), '#f59e0b', env)
+    const dispose = createAttentionScene(newCanvas(), 'approval', env)
     expect(registered).toBeGreaterThanOrEqual(1)
     dispose()
     expect(caf).toHaveBeenCalledWith(expect.any(Number))
@@ -30,7 +30,7 @@ describe('createAttentionScene', () => {
 
   it('draws a static frame and disposes with no cancelAnimationFrame in reduced-motion mode', () => {
     const env: SceneEnv = { reducedMotion: () => true }
-    const dispose: SceneDisposer = createAttentionScene(newCanvas(), '#34d399', env)
+    const dispose: SceneDisposer = createAttentionScene(newCanvas(), 'completed', env)
     // reducedMotion draws once synchronously; disposing with no caf still works.
     expect(() => { dispose() }).not.toThrow()
   })
@@ -40,7 +40,7 @@ describe('createAttentionScene', () => {
     const env: SceneEnv = { reducedMotion: () => true }
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      const dispose = createAttentionScene(newCanvas(), '#f59e0b', env)
+      const dispose = createAttentionScene(newCanvas(), 'approval', env)
       dispose()
     } finally {
       spy.mockRestore()
@@ -51,7 +51,7 @@ describe('createAttentionScene', () => {
     const original = window.devicePixelRatio
     try {
       window.devicePixelRatio = 0
-      const dispose = createAttentionScene(newCanvas(), '#f59e0b', { reducedMotion: () => true })
+      const dispose = createAttentionScene(newCanvas(), 'approval', { reducedMotion: () => true })
       expect(() => { dispose() }).not.toThrow()
     } finally {
       window.devicePixelRatio = original
@@ -60,7 +60,7 @@ describe('createAttentionScene', () => {
 
   it('does not start the loop when requestAnimationFrame is unavailable and reducedMotion is false', () => {
     const env: SceneEnv = { reducedMotion: () => false }
-    const dispose = createAttentionScene(newCanvas(), '#f59e0b', env)
+    const dispose = createAttentionScene(newCanvas(), 'approval', env)
     // handle stays 0, so dispose does not call a (absent) cancelAnimationFrame.
     expect(() => { dispose() }).not.toThrow()
   })
@@ -78,7 +78,7 @@ describe('createAttentionScene', () => {
       isHidden: () => hidden,
       onVisibilityChange: (cb) => { visCb = cb; return () => { visCb = null } },
     }
-    const dispose = createAttentionScene(newCanvas(), '#f59e0b', env)
+    const dispose = createAttentionScene(newCanvas(), 'approval', env)
     // Loop started: raf was called once.
     expect(raf).toHaveBeenCalledTimes(1)
     // Tab goes hidden → stopLoop cancels the handle.
@@ -105,7 +105,7 @@ describe('createAttentionScene', () => {
       isHidden: () => hidden,
       onVisibilityChange: (cb) => { visCb = cb; return () => { visCb = null } },
     }
-    const dispose = createAttentionScene(newCanvas(), '#f59e0b', env)
+    const dispose = createAttentionScene(newCanvas(), 'approval', env)
     // No loop started in reduced-motion mode.
     expect(raf).not.toHaveBeenCalled()
     // Visibility toggle does nothing.
@@ -128,7 +128,7 @@ describe('createAttentionScene', () => {
       isHidden: () => hidden,
       onVisibilityChange: (cb) => { visCb = cb; return () => { visCb = null } },
     }
-    const dispose = createAttentionScene(newCanvas(), '#f59e0b', env)
+    const dispose = createAttentionScene(newCanvas(), 'approval', env)
     expect(raf).toHaveBeenCalledTimes(1)
     // Fire "visible" while already running — handle !== 0, so startLoop is skipped.
     visCb!()
@@ -149,7 +149,7 @@ describe('createAttentionScene', () => {
       isHidden: () => hidden,
       onVisibilityChange: (cb) => { visCb = cb; return () => { visCb = null } },
     }
-    const dispose = createAttentionScene(newCanvas(), '#f59e0b', env)
+    const dispose = createAttentionScene(newCanvas(), 'approval', env)
     // Pause once.
     hidden = true
     visCb!()
@@ -170,7 +170,7 @@ describe('createAttentionScene', () => {
       isHidden: () => false,
       onVisibilityChange: (cb) => { visCb = cb; return () => { unsubscribed = true; visCb = null } },
     }
-    const dispose = createAttentionScene(newCanvas(), '#f59e0b', env)
+    const dispose = createAttentionScene(newCanvas(), 'approval', env)
     dispose()
     expect(unsubscribed).toBe(true)
     // After dispose, a visibility callback (if somehow still wired) is a no-op.

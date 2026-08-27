@@ -10,9 +10,11 @@ Status: implemented
 
 ## 决策
 
-**已发布包 `@deepseek-ai/dsh-client-ui-session-attention` 在 Canvas2D 上下文上手写投影绘制 3D 效果，而非 three.js。** 粒子位于球面、做 3D 旋转、经透视投影到 2D（`scene.ts`）；帧计算（`computeFrame`）是关于点集与时间的纯函数，`paintFrame` 是唯一的画布触点。投影数学、深度排序与深度衰减均可在无画布下单元测试，因此包在 jsdom 中达成 100% 覆盖率，无网络或 WebGL 依赖。
+**已发布包 `@deepseek-ai/dsh-client-ui-session-attention` 在 Canvas2D 上下文上手写投影绘制 3D 效果，而非 three.js。** 粒子位于球面、做 3D 旋转、经透视投影到 2D（`scene.ts`）；帧计算（`computeScene`）是关于时间并按提醒种类分派的纯函数，`paintFrame` 是唯一的画布触点。投影数学、深度排序、深度衰减与每类几何均可在无画布下单元测试，因此包在 jsdom 中达成 100% 覆盖率，无网络或 WebGL 依赖。
 
-**所有可绘制元素都以加法混合贴同一张预渲染光晕精灵，且 `paintFrame` 清空完整设备像素位图。** 场景渲染一个小型行星系——旋转的发光粒子壳层围绕呼吸的中心辉光，外侧一条倾斜轨道环上有一颗带渐隐拖尾的彗星，每个粒子按自身相位闪烁——重叠粒子积累的是亮度而非不透明度。若只清 CSS 尺寸区域而位图按 `devicePixelRatio` 放大，任何非 1 DPR 的屏幕都会让旧像素堆积成实心色块，因此清屏使用与位图相同的比率。场景数值常量是经由浏览器内实时原型调校的审美选择，并非推导值。
+**所有可绘制元素都以加法混合贴同一张预渲染光晕精灵，且 `paintFrame` 清空完整设备像素位图。** 若只清 CSS 尺寸区域而位图按 `devicePixelRatio` 放大，任何非 1 DPR 的屏幕都会让旧像素堆积成实心色块，因此清屏使用与位图相同的比率。场景数值常量是经由浏览器内实时原型调校的审美选择，并非推导值。
+
+**四套互不相同的场景之一随「当前最高优先级提醒种类」播放，让用户一眼分辨是哪类提醒。** `approval` 是旋转的透镜星系——发光的粒子壳层围绕呼吸的核心旋转，外侧一条倾斜轨道环上有一颗带渐隐拖尾的亮彗星；`plan-review` 是雷达扫描——两条同心虚线环上一根带目标点的旋转径向光臂；`question` 是回声——呼吸的核心向外脉冲扩散、逐圈淡出的波纹环；`completed` 是平稳的呼吸辉光——一颗缓慢环绕的柔和光环。场景主色跟随同一个最高优先级种类，动画与配色保持一致。
 
 **覆盖层持续可见，而非徽章。** 条目在有待办期间持续渲染，而非收成需用户点开的点；用户直接看到动画与等待行。每行带有该会话的状态色与本地化种类标签，点击行即打开该会话，浏览器标签页标题加 `(N)` 前缀使提醒在标签页切到后台时仍可见。所有等待会话处理完、所有后台回复打开后，覆盖层整体消失。
 
@@ -32,7 +34,7 @@ Status: implemented
 
 ## 测试
 
-`attention.client.spec.ts` 覆盖纯选择、key 与完成逻辑；`scene.client.spec.ts` 覆盖投影数学、精灵贴图的 `paintFrame` 与 `createAttentionScene` 生命周期（一帧循环、reduced-motion 静态帧、无 raf 销毁、空上下文无操作）。`panel.client.spec.tsx` 在可注入场景工厂的假 `useSessions` 下渲染 `AttentionPanel`，覆盖空渲染、各提醒种类、完成主题、点击打开、标题打标与恢复、+N 尾巴、reduced-motion、默认文案路径与抛错的场景工厂。`apply.client.spec.tsx` 覆盖 `shell.overlay` 注册、延迟注入、打开会话动作与拆卸。`apps/web/tests/session-attention.snapshot.ts` 以 keyless fixture transport 引导组装好的构建图，固定覆盖层的 wrap 存在、头计数、fixture 的待提问行与已打标的标签页标题。
+`attention.client.spec.ts` 覆盖纯选择、key 与完成逻辑，以及 `computeScene` 的每类几何（每个种类都产出互不相同且有效的场景）；`scene.client.spec.ts` 覆盖投影数学、精灵贴图的 `paintFrame` 与 `createAttentionScene` 生命周期（一帧循环、reduced-motion 静态帧、无 raf 销毁、空上下文无操作）。`panel.client.spec.tsx` 在可注入场景工厂的假 `useSessions` 下渲染 `AttentionPanel`，覆盖空渲染、各提醒种类、完成主题、最高优先级种类驱动场景工厂、点击打开、标题打标与恢复、+N 尾巴、reduced-motion、默认文案路径与抛错的场景工厂。`apply.client.spec.tsx` 覆盖 `shell.overlay` 注册、延迟注入、打开会话动作与拆卸。`apps/web/tests/session-attention.snapshot.ts` 以 keyless fixture transport 引导组装好的构建图，固定覆盖层的 wrap 存在、头计数、fixture 的待提问行与已打标的标签页标题。
 
 ## 相关
 
