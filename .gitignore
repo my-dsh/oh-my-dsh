@@ -45,3 +45,6 @@ worktrees/
 .typert-*/
 native/system/test/bin/
 .npmrc
+
+# Local-only launcher for the dsh web UI (personal WSL/Windows quick launch).
+scripts/start-dsh-web.sh
