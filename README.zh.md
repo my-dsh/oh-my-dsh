@@ -18,9 +18,13 @@ DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的�
 
 `@deepseek-ai/dsh-token-usage` 将每次模型调用的提供商用量落库到 SQLite，并按 `(provider, model)` 聚合成每日摘要——包括未命中缓存的输入、缓存读取、缓存写入、输出四类 token 用量，以及首 token 时延与耗时均值。内置 Web 仪表盘（`packages/bundle/token-usage-dashboard`）在 Web GUI 中展示这些跨会话统计。详见 [token-usage 子系统文档](docs/subsystems/token-usage.zh.md)。
 
+![Token 用量仪表盘：按提供方与模型分组的逐日跨会话统计](docs/media/token-usage-dashboard.png)
+
 ### 会话提醒
 
-当某个后台会话正在等待用户（待审批 / 待计划审阅 / 待提问等 `pendingInteraction`，或已完成但尚未打开会面的 AI 回复）时，Web GUI 右上角会浮现一个浮动覆盖层（`@deepseek-ai/dsh-client-ui-session-attention`）。它会为标签页标题加上 `(N)` 前缀，并根据当前最高优先级的提醒种类播放四套不同的 Canvas2D 动画之一，让用户一眼分辨是哪种提醒。详见 [session-attention 包](packages/client/ui-session-attention/README.zh.md)。
+当某个后台会话正在等待用户（待审批 / 待计划审阅 / 待提问等 `pendingInteraction`，或已完成但尚未打开的 AI 回复）时，Web GUI 右上角会浮现一个浮动覆盖层（`@deepseek-ai/dsh-client-ui-session-attention`）。它会为标签页标题加上 `(N)` 前缀，并根据当前最高优先级的提醒种类播放四套不同的 Canvas2D 动画之一，让用户一眼分辨是哪种提醒。详见 [session-attention 包](packages/client/ui-session-attention/README.zh.md)。
+
+![会话提醒覆盖层：提示有待用户处理的会话](docs/media/session-attention.png)
 
 ## 开发者预览
 
