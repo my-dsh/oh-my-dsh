@@ -26,7 +26,7 @@ export type {
 export { createScope, scopeOf } from './scope.ts'
 export type { AgentContext, AgentScopeHandle } from './scope.ts'
 export { SessionCreateError, SessionForkError } from './sessions/service.ts'
-export type { SessionBinding, SessionListState, SessionSummary } from './sessions/service.ts'
+export type { PendingInteractionStatus, SessionBinding, SessionListState, SessionSummary } from './sessions/service.ts'
 export type {
   SessionListPhase,
   SessionListSnapshot,

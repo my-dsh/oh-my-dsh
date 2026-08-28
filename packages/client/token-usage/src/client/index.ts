@@ -8,14 +8,17 @@
  *
  * Export discipline: packages/client/AGENTS.md.
  */
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ConnectionHandle } from '@deepseek-ai/dsh-api-remotes/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
 // Type-only: pulls the shell.overlay SlotMap declaration (the key's owner)
 // into this program so the overlay registration below typechecks against the
 // real declaration — no runtime edge to ui-layout.
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+// Type-only: pulls the SlotRegistry service merge (ctx.slots).
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+// Type-only: pulls the generated Remote API and ctx.remote merge through the Client assembly boundary.
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import { TokenUsageDashboard } from './TokenUsageDashboard.tsx'
 import type { TokenUsageDashboardInjected } from './slots.ts'
 import { en, zh, type DashboardKey } from './locales.ts'
@@ -33,8 +36,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 /** Dictionary namespace owned by this plugin. */
 const NS = 'tokenUsage.dashboard'
 
-/** Required services: the slot registry, the wire connection, and locale copy. */
-export const inject = ['slots', 'locale', 'connection']
+/** Required services: the slot registry, the Remote wire namespace, and locale copy. */
+export const inject = ['slots', 'locale', 'remote', 'remote.tokenUsage']
 
 /**
  * Client plugin body: register the `tokenUsage.dashboard` dictionaries, then
@@ -46,10 +49,9 @@ export const inject = ['slots', 'locale', 'connection']
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-token-usage: copy dictionaries')
 
-  const connection = ctx.get('connection') as ConnectionHandle
   const t = ctx.locale.bind(NS)
   const injected = (): TokenUsageDashboardInjected => ({
-    api: connection.api,
+    api: ctx.remote.tokenUsage,
     t,
   })
 

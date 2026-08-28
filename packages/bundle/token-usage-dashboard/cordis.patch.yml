@@ -25,5 +25,9 @@
       name: '@deepseek-ai/dsh-token-usage'
       inject: [tokenUsageStore]
 
+    - id: token-usage-remote
+      name: '@deepseek-ai/dsh-token-usage/service'
+      inject: [tokenUsageStore]
+
     - id: ui-token-usage
       name: '@deepseek-ai/dsh-client-token-usage'

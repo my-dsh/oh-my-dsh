@@ -1,7 +1,7 @@
 /** Session-attention slot registration into the root-scoped shell.overlay list. */
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
+import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { apply, inject } from '@deepseek-ai/dsh-client-ui-session-attention/client'
 import type { SessionAttentionInjected } from '@deepseek-ai/dsh-client-ui-session-attention/client'
 
@@ -21,8 +21,8 @@ async function bench(declare = true) {
 }
 
 describe('ui-session-attention apply', () => {
-  it('declares only the slots service', () => {
-    expect(inject).toEqual(['slots'])
+  it('declares the slots and sessions services', () => {
+    expect(inject).toEqual(['slots', 'sessions'])
   })
 
   it('injects one entry into shell.overlay and builds an open-session action', async () => {

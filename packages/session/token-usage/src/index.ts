@@ -35,6 +35,9 @@ import type { TokenUsageEventRecord } from './types.ts'
 
 export type { TokenUsageDailyGroup, TokenUsageDailySummary, TokenUsageDailySummaryView, TokenUsageEventRecord, TokenUsageGroupView, TokenUsagePurgeRequest, TokenUsagePurgeResult, TokenUsageStore } from './types.ts'
 export { SqliteTokenUsageStore, TOKEN_USAGE_APPLICATION_ID, TOKEN_USAGE_SCHEMA_VERSION, dayKey, openTokenUsageDatabase } from './store.ts'
+// Type-only re-export so the Typert generator reaches the Remote service in
+// `remote.ts` from the public `.` entry; the runtime Remote bundle is `./remote`.
+export type { TokenUsageRemoteService } from './remote.ts'
 
 /** Cordis plugin name. */
 export const name = 'token-usage'

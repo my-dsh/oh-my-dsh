@@ -185,6 +185,11 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // through a hashed chunk. The committed bin.js is the link target pnpm can
   // resolve at install time, before the build produces lib/bin.js.
   '@deepseek-ai/dsh-experimental-webworker-packer': ['bin.js', 'lib/repository-*.js'],
+  '@deepseek-ai/dsh-subprocess-local': ['scripts/ensure-spawn-helper.mjs'],
+  // token-usage ships its Remote service and SQLite store as independent tsdown
+  // entries beside the node lib: ./service resolves lib/remote.js and
+  // ./sqlite-provider resolves lib/sqlite-provider.js.
+  '@deepseek-ai/dsh-token-usage': ['lib/remote.js', 'lib/sqlite-provider.js'],
 }
 
 function sameStringList(actual: readonly string[] | undefined, expected: readonly string[]): boolean {
