@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/** AttentionPanel rendering against a fake useSessions hook and an injectable scene. */
+/** AttentionPanel rendering against a fake useSessions hook and an injectable character scene. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
@@ -7,7 +7,7 @@ import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-client-r
 import { AttentionPanel } from '../src/client/AttentionPanel.tsx'
 import type { Translate } from '../src/client/AttentionPanel.tsx'
 import type { AttentionKind } from '../src/client/attention.ts'
-import { prefersReducedMotion, type SceneEnv, type SceneDisposer } from '../src/client/scene.ts'
+import { prefersReducedMotion, type CharacterEnv, type CharacterDisposer, type CharacterPhase } from '../src/client/character.ts'
 
 function summary(id: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
   return {
@@ -33,9 +33,9 @@ function fakeUseSessions(snapshot: SessionListState): SnapshotSelectorHook<Sessi
   }
 }
 
-/** A scene env whose raf never fires (so no WebGL/canvas draws in jsdom). */
-const noRafEnv: SceneEnv = { reducedMotion: () => false }
-const reducedEnv: SceneEnv = { reducedMotion: () => true }
+/** A scene env whose raf never fires (so no canvas draws in jsdom). */
+const noRafEnv: CharacterEnv = { reducedMotion: () => false }
+const reducedEnv: CharacterEnv = { reducedMotion: () => true }
 
 const t: Translate = (key, vars) => {
   if (key === 'more') return 'more ' + String(vars?.n ?? 0)
@@ -49,12 +49,14 @@ describe('AttentionPanel', () => {
   })
   afterEach(() => { cleanup() })
 
-  it('renders nothing when no session needs attention', () => {
+  it('renders nothing when no session needs attention (peek mode)', () => {
     const snap = state(['a'], { a: summary('a') })
     const { container } = render(
       <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} env={noRafEnv} />,
     )
+    // Peek mode: nothing renders — no wrap, no panel head/rows.
     expect(container.firstChild).toBeNull()
+    expect(screen.queryByText(/· \d/)).toBeNull()
     expect(document.title).toBe('base')
   })
 
@@ -125,13 +127,12 @@ describe('AttentionPanel', () => {
     expect(screen.getByText('more 2')).toBeTruthy()
   })
 
-  it('starts the scene in reduced-motion mode (one static frame) and disposes', () => {
-    // Inject createAttentionScene indirectly via env; reducedMotion true path.
+  it('starts the character scene in reduced-motion mode (one static frame) and disposes', () => {
     const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
     const { unmount } = render(
       <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} env={reducedEnv} />,
     )
-    // The canvas is present and the panel mounted.
+    // The panel mounted.
     expect(screen.getByText(/· 1/)).toBeTruthy()
     unmount()
   })
@@ -168,7 +169,6 @@ describe('AttentionPanel', () => {
 
   it('builds the default scene env when no env is injected', () => {
     const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
-    // No env prop → the effect builds the default env and calls prefersReducedMotion.
     const { unmount } = render(
       <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} />,
     )
@@ -177,7 +177,7 @@ describe('AttentionPanel', () => {
   })
 
   it('falls back to a no-op dispose when the scene factory throws', () => {
-    const throwFactory = (): SceneDisposer => { throw new Error('boom') }
+    const throwFactory = (): CharacterDisposer => { throw new Error('boom') }
     const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
     const { unmount } = render(
       <AttentionPanel
@@ -193,7 +193,7 @@ describe('AttentionPanel', () => {
 
   it('calls the injected scene factory and its disposer on unmount', () => {
     const disposed = vi.fn()
-    const factory = vi.fn((): SceneDisposer => () => { disposed() })
+    const factory = vi.fn((): CharacterDisposer => () => { disposed() })
     const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
     const { unmount } = render(
       <AttentionPanel
@@ -209,14 +209,14 @@ describe('AttentionPanel', () => {
   })
 
   it('passes the highest-priority kind to the scene factory', () => {
-    // A plan-review row (priority 1) is the scene driver even when a lower
-    // priority question row is also present, so the animation matches the kind
-    // the user is most likely acting on.
     const snap = state(['b', 'a'], {
       a: summary('a', { pendingInteraction: 'question' }),
       b: summary('b', { pendingInteraction: 'plan-review' }),
     })
-    const factory = vi.fn((_c: HTMLCanvasElement, _k: AttentionKind, _e: SceneEnv): SceneDisposer => () => {})
+    const factory = vi.fn(
+      (_c: HTMLCanvasElement, _img: string | undefined, _e: CharacterEnv,
+        _cb: { getPhase: () => CharacterPhase; kind: AttentionKind }): CharacterDisposer => () => {},
+    )
     const { unmount } = render(
       <AttentionPanel
         useSessions={fakeUseSessions(snap)}
@@ -226,13 +226,16 @@ describe('AttentionPanel', () => {
       />,
     )
     expect(factory).toHaveBeenCalledTimes(1)
-    expect(factory).toHaveBeenCalledWith(expect.any(HTMLCanvasElement), 'plan-review', expect.anything())
+    expect(factory.mock.calls[0]![3].kind).toBe('plan-review')
     unmount()
   })
 
   it('starts a completed animation when only completed rows remain', () => {
     const snap = state(['a'], { a: summary('a', { completed: true }) })
-    const factory = vi.fn((_c: HTMLCanvasElement, _k: AttentionKind, _e: SceneEnv): SceneDisposer => () => {})
+    const factory = vi.fn(
+      (_c: HTMLCanvasElement, _img: string | undefined, _e: CharacterEnv,
+        _cb: { getPhase: () => CharacterPhase; kind: AttentionKind }): CharacterDisposer => () => {},
+    )
     const { unmount } = render(
       <AttentionPanel
         useSessions={fakeUseSessions(snap)}
@@ -241,8 +244,47 @@ describe('AttentionPanel', () => {
         createScene={factory}
       />,
     )
-    expect(factory).toHaveBeenCalledWith(expect.any(HTMLCanvasElement), 'completed', expect.anything())
+    expect(factory.mock.calls[0]![3].kind).toBe('completed')
     unmount()
+  })
+
+  it('accepts a characterImage prop and passes it to the scene factory', () => {
+    const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
+    const factory = vi.fn(
+      (_c: HTMLCanvasElement, _img: string | undefined, _e: CharacterEnv,
+        _cb: { getPhase: () => CharacterPhase; kind: AttentionKind }): CharacterDisposer => () => {},
+    )
+    render(
+      <AttentionPanel
+        useSessions={fakeUseSessions(snap)}
+        openSession={() => {}}
+        characterImage="data:image/png;base64,abc"
+        env={noRafEnv}
+        createScene={factory}
+      />,
+    )
+    expect(factory.mock.calls[0]![1]).toBe('data:image/png;base64,abc')
+  })
+
+  it('transitions from peek to panel when attention arrives', () => {
+    const snap = state(['a'], { a: summary('a') })
+    const { rerender } = render(
+      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} env={noRafEnv} />,
+    )
+    // Initially peek: no panel head.
+    expect(screen.queryByText(/· \d/)).toBeNull()
+    // Attention arrives.
+    rerender(
+      <AttentionPanel
+        useSessions={fakeUseSessions(state(['a'], { a: summary('a', { pendingInteraction: 'approval', displayTitle: 'Alpha' }) }))}
+        openSession={() => {}}
+        env={noRafEnv}
+      />,
+    )
+    // After re-render, the lifecycle effect runs and eventually the panel shows.
+    // The RAF tick drives enter→dance; for this test we just check the panel
+    // head appears (the lifecycle transitions through enter to dance).
+    expect(screen.getByText('Alpha')).toBeTruthy()
   })
 })
 

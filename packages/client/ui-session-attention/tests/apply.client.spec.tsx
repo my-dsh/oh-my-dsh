@@ -34,6 +34,8 @@ describe('ui-session-attention apply', () => {
     const injected = (entry.inject as unknown as () => SessionAttentionInjected)()
     injected.openSession('s1')
     expect(b.sessions.open).toHaveBeenCalledWith('s1')
+    // characterImage defaults to undefined when no config is provided.
+    expect(injected.characterImage).toBeUndefined()
     // A missing sessions service does not throw (the action no-ops).
     const noopCtx = new Context()
     await noopCtx.plugin(SlotRegistry).await()
@@ -71,5 +73,13 @@ describe('ui-session-attention apply', () => {
     expect(b.slots.entries('shell.overlay')).toHaveLength(1)
     await fiber.dispose()
     expect(b.slots.entries('shell.overlay')).toHaveLength(0)
+  })
+
+  it('passes characterImage from config to the injected face', async () => {
+    const b = await bench()
+    await b.ctx.plugin({ inject: [...inject], apply }, { characterImage: 'data:image/png;base64,abc' }).await()
+    const entry = b.slots.entries('shell.overlay')[0]!
+    const injected = (entry.inject as unknown as () => SessionAttentionInjected)()
+    expect(injected.characterImage).toBe('data:image/png;base64,abc')
   })
 })
