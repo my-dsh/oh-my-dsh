@@ -1,8 +1,9 @@
 /** Pure attention-selection logic (no React, no canvas). */
 import { describe, expect, it } from 'vitest'
-import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
-  KIND_META, KIND_PRIORITY, attentionRowsKey, isAllCompleted, selectAttention,
+  KIND_META, KIND_PRIORITY, attentionKindOf, attentionRowsKey, isAllCompleted, selectAttention,
   type AttentionKind, type AttentionRow,
 } from '../src/client/attention.ts'
 
@@ -20,22 +21,39 @@ function state(ids: string[], byId: Record<string, SessionSummary>, current?: st
   } as SessionListState
 }
 
+/** Build a pending-interaction snapshot from session-id → kind entries. */
+function pending(entries: Record<string, string>): ReadonlyMap<SessionId, { kind: string }> {
+  const map = new Map<SessionId, { kind: string }>()
+  for (const [id, kind] of Object.entries(entries)) map.set(id as SessionId, { kind })
+  return map
+}
+
 /** Build a typed attention row (SessionId/AttentionKind are branded/literal). */
 function row(kind: AttentionKind, id: string, title: string): AttentionRow {
   return { kind, id: id as AttentionRow['id'], title }
 }
+
+describe('attentionKindOf', () => {
+  it('maps the three attention statuses and rejects unknown kinds', () => {
+    expect(attentionKindOf('approval')).toBe('approval')
+    expect(attentionKindOf('plan-review')).toBe('plan-review')
+    expect(attentionKindOf('question')).toBe('question')
+    expect(attentionKindOf('unknown')).toBeUndefined()
+    expect(attentionKindOf(undefined)).toBeUndefined()
+  })
+})
 
 describe('selectAttention', () => {
   it('surfaces pending interactions and excludes blank rows', () => {
     const s = state(
       ['a', 'b', 'c'],
       {
-        a: summary('a', { pendingInteraction: 'approval' }),
-        b: summary('b', { blank: true, pendingInteraction: 'question' }),
-        c: summary('c', { pendingInteraction: 'plan-review' }),
+        a: summary('a'),
+        b: summary('b', { blank: true }),
+        c: summary('c'),
       },
     )
-    expect(selectAttention(s).map(r => r.kind)).toEqual(['approval', 'plan-review'])
+    expect(selectAttention(s, pending({ a: 'approval', b: 'question', c: 'plan-review' })).map(r => r.kind)).toEqual(['approval', 'plan-review'])
   })
 
   it('surfaces completed sessions including the currently-open one', () => {
@@ -53,26 +71,26 @@ describe('selectAttention', () => {
   })
 
   it('pending interaction outranks completed for the same session', () => {
-    const s = state(['a'], { a: summary('a', { pendingInteraction: 'question', completed: true }) })
-    expect(selectAttention(s).map(r => r.kind)).toEqual(['question'])
+    const s = state(['a'], { a: summary('a', { completed: true }) })
+    expect(selectAttention(s, pending({ a: 'question' })).map(r => r.kind)).toEqual(['question'])
   })
 
   it('sorts by kind priority then id', () => {
     const s = state(['z', 'y', 'x', 'w'], {
       z: summary('z', { completed: true }),
-      y: summary('y', { pendingInteraction: 'question' }),
-      x: summary('x', { pendingInteraction: 'approval' }),
-      w: summary('w', { pendingInteraction: 'plan-review' }),
+      y: summary('y'),
+      x: summary('x'),
+      w: summary('w'),
     })
-    expect(selectAttention(s).map(r => r.id)).toEqual(['x', 'w', 'y', 'z'])
+    expect(selectAttention(s, pending({ y: 'question', x: 'approval', w: 'plan-review' })).map(r => r.id)).toEqual(['x', 'w', 'y', 'z'])
   })
 
   it('sorts equal-priority rows by id (the `pa === pb` branch)', () => {
     const s = state(['b', 'a'], {
-      a: summary('a', { pendingInteraction: 'approval' }),
-      b: summary('b', { pendingInteraction: 'approval' }),
+      a: summary('a'),
+      b: summary('b'),
     })
-    expect(selectAttention(s).map(r => r.id)).toEqual(['a', 'b'])
+    expect(selectAttention(s, pending({ a: 'approval', b: 'approval' })).map(r => r.id)).toEqual(['a', 'b'])
   })
 
   it('returns an empty array when nothing needs attention', () => {
@@ -81,8 +99,8 @@ describe('selectAttention', () => {
   })
 
   it('skips ids absent from byId', () => {
-    const s = state(['a', 'ghost'], { a: summary('a', { pendingInteraction: 'approval' }) })
-    expect(selectAttention(s).map(r => r.id)).toEqual(['a'])
+    const s = state(['a', 'ghost'], { a: summary('a') })
+    expect(selectAttention(s, pending({ a: 'approval' })).map(r => r.id)).toEqual(['a'])
   })
 })
 

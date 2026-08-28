@@ -35,6 +35,9 @@ import type { SessionRemotes } from './remotes.ts'
 import type { SessionListPhase, SessionSearchResultItem, SubagentCatalogSnapshot } from './manager.ts'
 import type { Session } from './session.ts'
 
+/** Session-list summary of the user action currently blocking progress. */
+export type PendingInteractionStatus = 'approval' | 'plan-review' | 'question'
+
 /** Session list row projected from the host list RPC plus live stream increments. */
 export interface SessionSummary {
   id: SessionId
@@ -47,8 +50,6 @@ export interface SessionSummary {
   /** Coarse durable origin for navigation filtering; not a continuation capability. */
   origin?: 'subagent'
   running: boolean
-  /** User interaction currently blocking this session (sidebar amber-dot state). */
-  pendingInteraction?: PendingInteractionStatus
   /** Finished while not selected and not yet opened — the sidebar's green "done" reminder. Absent = false. */
   completed?: boolean
   /**

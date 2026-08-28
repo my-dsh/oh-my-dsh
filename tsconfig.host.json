@@ -275,6 +275,7 @@
     { "path": "./packages/bundle/sdk-minimal" },
     { "path": "./packages/bundle/web-app" },
     { "path": "./packages/bundle/token-usage-dashboard" },
+    { "path": "./packages/bundle/session-attention" },
     { "path": "./packages/boot/app-boot" },
     { "path": "./packages/boot/cmdline" },
     { "path": "./packages/sdk/server" },

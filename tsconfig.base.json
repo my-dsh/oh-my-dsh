@@ -79,6 +79,9 @@
       "@deepseek-ai/dsh-session-turn-outline/client": ["./packages/session/session-turn-outline/src/client.ts"],
       "@deepseek-ai/dsh-token-meter/client": ["./packages/llm/token-meter/src/client.ts"],
       "@deepseek-ai/dsh-token-usage/types": ["./packages/session/token-usage/src/types.ts"],
+      "@deepseek-ai/dsh-token-usage": ["./packages/session/token-usage/src/index.ts"],
+      "@deepseek-ai/dsh-token-usage/sqlite-provider": ["./packages/session/token-usage/src/store.ts"],
+      "@deepseek-ai/dsh-token-usage/service": ["./packages/session/token-usage/src/remote.ts"],
       "@deepseek-ai/dsh-plan-mode/types": ["./packages/plan/plan-mode/src/types.ts"],
       "@deepseek-ai/dsh-plan-mode/client": ["./packages/plan/plan-mode/src/client.ts"],
       "@deepseek-ai/dsh-agent-presets/types": ["./packages/preset/agent-presets/src/types.ts"],
@@ -170,6 +173,7 @@
       "@deepseek-ai/dsh-client-ui-layout": ["./packages/client/ui-layout/src"],
       "@deepseek-ai/dsh-client-ui-sidebar": ["./packages/client/ui-sidebar/src"],
       "@deepseek-ai/dsh-client-ui-session-attention": ["./packages/client/ui-session-attention/src"],
+      "@deepseek-ai/dsh-client-token-usage": ["./packages/client/token-usage/src"],
       "@deepseek-ai/dsh-client-ui-brand-official": ["./packages/client/ui-brand-official/src"],
       "@deepseek-ai/dsh-client-ui-approval": ["./packages/client/ui-approval/src"],
       "@deepseek-ai/dsh-client-ui-approval/client": ["./packages/client/ui-approval/src/client/index.ts"],
@@ -325,6 +329,8 @@
       "@deepseek-ai/dsh-sdk-app": ["./packages/bundle/sdk-app/src"],
       "@deepseek-ai/dsh-sdk-minimal": ["./packages/bundle/sdk-minimal/src"],
       "@deepseek-ai/dsh-session": ["./packages/core/session/src"],
+      "@deepseek-ai/dsh-session-attention": ["./packages/bundle/session-attention/src"],
+      "@deepseek-ai/dsh-session-attention/invariant": ["./packages/bundle/session-attention/src/invariant.ts"],
       "@deepseek-ai/dsh-session-checkpoint-policy": ["./packages/session/session-checkpoint-policy/src"],
       "@deepseek-ai/dsh-session-log-deepseek": ["./packages/session/session-log-deepseek/src"],
       "@deepseek-ai/dsh-session-log-deepseek/invariant": ["./packages/session/session-log-deepseek/src/invariant.ts"],
@@ -356,6 +362,9 @@
       "@deepseek-ai/dsh-spill": ["./packages/spill/spill/src"],
       "@deepseek-ai/dsh-spill-local": ["./packages/spill/spill-local/src"],
       "@deepseek-ai/dsh-spill-policy": ["./packages/spill/spill-policy/src"],
+      "@deepseek-ai/dsh-spill-policy/invariant": ["./packages/spill/spill-policy/src/invariant.ts"],
+      "@deepseek-ai/dsh-step-timing": ["./packages/util/step-timing/src"],
+      "@deepseek-ai/dsh-step-timing/invariant": ["./packages/util/step-timing/src/invariant.ts"],
       "@deepseek-ai/dsh-storage": ["./packages/storage/storage/src"],
       "@deepseek-ai/dsh-storage-domain": ["./packages/storage/storage-domain/src"],
       "@deepseek-ai/dsh-storage-domain/invariant": ["./packages/storage/storage-domain/src/invariant.ts"],
@@ -382,6 +391,10 @@
       "@deepseek-ai/dsh-timeout": ["./packages/util/timeout/src"],
       "@deepseek-ai/dsh-tmux-context": ["./packages/context/tmux-context/src"],
       "@deepseek-ai/dsh-token-meter": ["./packages/llm/token-meter/src"],
+      "@deepseek-ai/dsh-token-meter/invariant": ["./packages/llm/token-meter/src/invariant.ts"],
+      "@deepseek-ai/dsh-token-usage/invariant": ["./packages/session/token-usage/src/invariant.ts"],
+      "@deepseek-ai/dsh-token-usage-dashboard": ["./packages/bundle/token-usage-dashboard/src"],
+      "@deepseek-ai/dsh-token-usage-dashboard/invariant": ["./packages/bundle/token-usage-dashboard/src/invariant.ts"],
       "@deepseek-ai/dsh-tool-ask-user": ["./packages/interaction/tool-ask-user/src"],
       "@deepseek-ai/dsh-tool-bash": ["./packages/shell/tool-bash/src"],
       "@deepseek-ai/dsh-tool-bash-persistent": ["./packages/shell/tool-bash-persistent/src"],
@@ -424,7 +437,9 @@
       "@deepseek-ai/dsh-workflow/invariant": ["./packages/workflow/workflow/src/invariant.ts"],
       "@deepseek-ai/dsh-workflow-worker-thread": ["./packages/workflow/workflow-worker-thread/src"],
       "@deepseek-ai/dsh-workspace": ["./packages/workspace/workspace/src"],
-      "@deepseek-ai/dsh-workspace/invariant": ["./packages/workspace/workspace/src/invariant.ts"]
+      "@deepseek-ai/dsh-workspace/invariant": ["./packages/workspace/workspace/src/invariant.ts"],
+      "@deepseek-ai/dsh-zoned-time": ["./packages/util/zoned-time/src"],
+      "@deepseek-ai/dsh-zoned-time/invariant": ["./packages/util/zoned-time/src/invariant.ts"]
       // END generated package aliases
     }
   }

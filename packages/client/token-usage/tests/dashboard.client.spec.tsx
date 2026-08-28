@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
-import { RpcId } from '@deepseek-ai/dsh-host-apiproxy/api'
 import type { TokenUsageDailySummaryView } from '@deepseek-ai/dsh-api-remotes/client'
 import type { TokenUsageDashboardInjected } from '../src/client/slots.ts'
 import { TokenUsageDashboard } from '../src/client/TokenUsageDashboard.tsx'
@@ -32,15 +31,13 @@ const SUMMARY: TokenUsageDailySummaryView = {
   },
 }
 
-const ok = (value: TokenUsageDailySummaryView) => ({ rpcId: RpcId('fake'), result: { ok: true as const, value } })
+const ok = (value: TokenUsageDailySummaryView) => ({ ok: true as const, value })
 
 function apiMock() {
   return {
-    tokenUsage: {
-      dailySummary: vi.fn(async () => ok(SUMMARY)),
-      dailySummaryRange: vi.fn(async (_request: { startDate: string; endDate: string; timeZone: string }) => ok(SUMMARY)),
-      purge: vi.fn(),
-    },
+    dailySummary: vi.fn(async (_date: string, _timeZone: string) => ok(SUMMARY)),
+    dailySummaryRange: vi.fn(async (_startDate: string, _endDate: string, _timeZone: string) => ok(SUMMARY)),
+    purge: vi.fn(),
   }
 }
 
@@ -73,7 +70,7 @@ describe('TokenUsageDashboard', () => {
     expect(screen.getAllByText('9').length).toBeGreaterThan(0)
     expect(screen.getAllByText('56.8s').length).toBeGreaterThan(0)
     expect(screen.getByText('2m4s')).toBeTruthy()
-    expect(api.tokenUsage.dailySummary).toHaveBeenCalledTimes(1)
+    expect(api.dailySummary).toHaveBeenCalledTimes(1)
   })
 
   it('renders the four disjoint token-bucket columns and billed total in the per-group table', async () => {
@@ -93,7 +90,7 @@ describe('TokenUsageDashboard', () => {
     expect(screen.getAllByText('8.7K').length).toBeGreaterThan(0)
     // KPI total uses the billed口径: 3600 + 9200 + 320 + 8650 = 21770 → 21.8K.
     expect(screen.getAllByText('21.8K').length).toBeGreaterThan(0)
-    expect(api.tokenUsage.dailySummary).toHaveBeenCalledTimes(1)
+    expect(api.dailySummary).toHaveBeenCalledTimes(1)
   })
 
   it('renders the turns and avg-time KPI cards from the totals row', async () => {
@@ -103,7 +100,7 @@ describe('TokenUsageDashboard', () => {
     await waitFor(() => { expect(screen.getByText('总轮数')).toBeTruthy() })
     expect(screen.getAllByText('平均耗时').length).toBeGreaterThan(0)
     expect(screen.getAllByText('9').length).toBeGreaterThan(0)
-    expect(api.tokenUsage.dailySummary).toHaveBeenCalledTimes(1)
+    expect(api.dailySummary).toHaveBeenCalledTimes(1)
   })
 
   it('requests an inclusive 7-day window (not [yesterday, today]) when the 近 7 天 preset is clicked', async () => {
@@ -116,20 +113,21 @@ describe('TokenUsageDashboard', () => {
       render(<TokenUsageDashboard api={api} t={t} />)
       await openPanel()
       // Wait for the initial day fetch to settle before driving the preset.
-      await waitFor(() => { expect(api.tokenUsage.dailySummary).toHaveBeenCalledTimes(1) })
+      await waitFor(() => { expect(api.dailySummary).toHaveBeenCalledTimes(1) })
 
       await act(async () => {
         screen.getByRole('button', { name: '近 7 天' }).click()
         await Promise.resolve()
       })
-      await waitFor(() => { expect(api.tokenUsage.dailySummaryRange).toHaveBeenCalledTimes(1) })
+      await waitFor(() => { expect(api.dailySummaryRange).toHaveBeenCalledTimes(1) })
       // Today (2026-08-10) plus the previous six days → [2026-08-04, 2026-08-10].
       // The browser zone rides the same payload so the host bounds the day in the
       // zone that derived it; the zone is the real environment's (Date is faked,
       // Intl is not), so assert its shape rather than its value.
-      const call = api.tokenUsage.dailySummaryRange.mock.calls[0]![0]
-      expect(call).toMatchObject({ startDate: '2026-08-04', endDate: '2026-08-10' })
-      expect(call.timeZone).toMatch(/^(UTC|[A-Za-z][A-Za-z0-9_+.-]*(?:\/[A-Za-z0-9_+.-]+)+)$/)
+      const [startDate, endDate, timeZone] = api.dailySummaryRange.mock.calls[0]!
+      expect(startDate).toBe('2026-08-04')
+      expect(endDate).toBe('2026-08-10')
+      expect(timeZone).toMatch(/^(UTC|[A-Za-z][A-Za-z0-9_+.-]*(?:\/[A-Za-z0-9_+.-]+)+)$/)
     } finally {
       vi.useRealTimers()
     }

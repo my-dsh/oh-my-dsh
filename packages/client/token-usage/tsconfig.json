@@ -15,9 +15,6 @@
       "path": "../locale"
     },
     {
-      "path": "../runtime"
-    },
-    {
       "path": "../ui-primitives"
     },
     {
@@ -27,10 +24,13 @@
       "path": "../ui-layout"
     },
     {
-      "path": "../../host/apiproxy"
+      "path": "../ui-renderer"
     },
     {
       "path": "../../api/remotes/tsconfig.client.json"
+    },
+    {
+      "path": "../../typert/protocol"
     },
     {
       "path": "../../runtime-diagnostics/invariants"

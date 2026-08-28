@@ -12,11 +12,10 @@
  * derived from the standard `useSessions` hook with the same data the sidebar
  * status dots use.
  */
-import { useEffect, useRef, useState } from 'react'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionListState } from '@deepseek-ai/dsh-client-runtime/client'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  KIND_META, attentionRowsKey, isAllCompleted, selectAttention,
+  KIND_META, isAllCompleted, selectAttention,
   type AttentionKind, type AttentionRow,
 } from './attention.ts'
 import {
@@ -54,13 +53,7 @@ function kindLabel(t: Translate, kind: AttentionKind): string {
 }
 
 /** Props the shell.overlay owner hands the entry (standard `useSessions`). */
-export interface AttentionPanelProps {
-  /** Standard root-scope session list selector hook. */
-  useSessions: SnapshotSelectorHook<SessionListState>
-  /** Inject face: open a session when a row is clicked. */
-  openSession: SessionAttentionInjected['openSession']
-  /** Optional character PNG URL (or data-URI); null/undefined uses the fallback creature. */
-  characterImage?: string
+export interface AttentionPanelProps extends PropsRuntime<'shell.overlay'>, InjectFace<SessionAttentionInjected> {
   /** Optional localized translator (defaults to Chinese copy). */
   t?: Translate
   /** Optional scene environment override (tests). */
@@ -84,9 +77,18 @@ const MAX_ROWS = 5
  * @param props - the standard useSessions hook plus the open-session action.
  */
 export function AttentionPanel({
-  useSessions, openSession, characterImage, t, env, createScene,
+  useSessions, useSessionPendingInteraction, openSession, characterImage, t, env, createScene,
 }: AttentionPanelProps) {
-  const rows = useSessions(selectAttention, (a, b) => attentionRowsKey(a) === attentionRowsKey(b))
+  // The session list carries `completed` reminders; pending interactions
+  // (approval / plan-review / question) arrive on a separate standard hook.
+  // Both are framework-made hooks; the merge is a pure derivation over their
+  // snapshots, never its own subscription.
+  const list = useSessions(s => s)
+  const pending = useSessionPendingInteraction(s => s)
+  const rows = useMemo(
+    () => selectAttention(list, pending),
+    [list, pending],
+  )
   const translate: Translate = t ?? ((key, vars) => DEFAULT_COPY[key](vars))
   const count = rows.length
   const hasAttention = count > 0
@@ -117,7 +119,7 @@ export function AttentionPanel({
         stateStartRef.current = performance.now()
         setLifecycleState('dance')
       }, ENTER_DURATION * 1000)
-      return () => clearTimeout(id)
+      return () => { clearTimeout(id) }
     }
     /* v8 ignore next 7 -- the exit→peek timer fires after EXIT_DURATION (0.5s); tests unmount before it triggers */
     if (lifecycleState === 'exit' && !hasAttention) {
@@ -125,7 +127,7 @@ export function AttentionPanel({
         stateStartRef.current = performance.now()
         setLifecycleState('peek')
       }, EXIT_DURATION * 1000)
-      return () => clearTimeout(id)
+      return () => { clearTimeout(id) }
     }
   }, [lifecycleState, hasAttention])
 

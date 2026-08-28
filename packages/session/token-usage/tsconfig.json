@@ -28,6 +28,9 @@
     },
     {
       "path": "../../util/zoned-time"
+    },
+    {
+      "path": "../../typert/protocol"
     }
   ]
 }

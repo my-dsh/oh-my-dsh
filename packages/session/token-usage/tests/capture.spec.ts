@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { Context, Service } from '@deepseek-ai/cordis'
-import { CallId, createAssistantMessage, createToolResultMessage } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, createAssistantMessage, createToolResultMessage } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId, type Session } from '@deepseek-ai/dsh-session'
 import { apply as tokenUsageApply } from '../src/index.ts'
 import type { TokenUsageEventRecord } from '../src/types.ts'
@@ -69,12 +69,12 @@ describe('token-usage capture fold', () => {
     expect(store.records).toHaveLength(0)
 
     await gap()
-    const toolCall = session.append('tool/call', { turn: 1, step: 1, callId: CallId('call_1'), name: 'read', arguments: '{}' })
+    const toolCall = session.append('tool/call', { turn: 1, step: 1, callId: ToolCallId('call_1'), name: 'read', arguments: '{}' })
     await gap(8)
     const toolResult = session.append('tool/result', {
       turn: 1,
       step: 1,
-      message: createToolResultMessage({ callId: CallId('call_1'), content: [{ type: 'text', text: 'ok' }], isError: false }),
+      message: createToolResultMessage({ callId: ToolCallId('call_1'), content: [{ type: 'text', text: 'ok' }], isError: false }),
     }, { surfaceOp: 'append' })
     session.append('step/end', { turn: 1, step: 1 })
 
@@ -136,7 +136,7 @@ describe('token-usage capture fold', () => {
     const { store, session } = await harness()
     // No-usage step: tool events must not be tracked against a never-written record.
     session.append('step/start', { turn: 1, step: 3 })
-    session.append('tool/call', { turn: 1, step: 3, callId: CallId('call_x'), name: 'read', arguments: '{}' })
+    session.append('tool/call', { turn: 1, step: 3, callId: ToolCallId('call_x'), name: 'read', arguments: '{}' })
     session.append('assistant/message', {
       turn: 1,
       step: 3,
