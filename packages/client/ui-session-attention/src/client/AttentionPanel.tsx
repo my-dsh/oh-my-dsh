@@ -1,12 +1,18 @@
 /**
- * The session-attention overlay panel: renders continuously in `shell.overlay`
- * while any session awaits the user's action (approval / plan review / question)
- * or an AI reply finished without being opened since. The animation is a
- * self-contained Canvas2D glowing planet system (see {@link ./scene.ts}); the
- * attention rows are derived from the standard `useSessions` hook with the same
- * data the sidebar status dots use.
+ * The session-attention overlay panel: renders a character that peeks in from
+ * the top-right edge, jumps out to play a kind-specific dance when attention is
+ * owed, then retreats back to its peek pose when all sessions are handled.
+ *
+ * The character animation is a Canvas2D system (see {@link ./character.ts})
+ * that supports a user-supplied PNG or falls back to a procedurally drawn
+ * creature. The lifecycle state machine (see {@link ./character-lifecycle.ts})
+ * drives the peek → enter → dance → exit → peek cycle. State transitions are
+ * driven synchronously by `hasAttention` changes; the character scene's own RAF
+ * loop animates the progress within the current phase. The attention rows are
+ * derived from the standard `useSessions` hook with the same data the sidebar
+ * status dots use.
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionListState } from '@deepseek-ai/dsh-client-runtime/client'
 import {
@@ -14,8 +20,14 @@ import {
   type AttentionKind, type AttentionRow,
 } from './attention.ts'
 import {
-  createAttentionScene, prefersReducedMotion, type SceneEnv, type SceneDisposer,
-} from './scene.ts'
+  createCharacterScene, prefersReducedMotion,
+  ENTER_DURATION, EXIT_DURATION,
+  type CharacterEnv, type CharacterDisposer, type CharacterPhase,
+} from './character.ts'
+import {
+  isPanelVisible, INITIAL_STATE, nextState, phaseOf,
+  type LifecycleState,
+} from './character-lifecycle.ts'
 import type { SessionAttentionInjected } from './contract/slots.ts'
 import css from './AttentionPanel.module.css'
 
@@ -47,30 +59,75 @@ export interface AttentionPanelProps {
   useSessions: SnapshotSelectorHook<SessionListState>
   /** Inject face: open a session when a row is clicked. */
   openSession: SessionAttentionInjected['openSession']
+  /** Optional character PNG URL (or data-URI); null/undefined uses the fallback creature. */
+  characterImage?: string
   /** Optional localized translator (defaults to Chinese copy). */
   t?: Translate
   /** Optional scene environment override (tests). */
-  env?: SceneEnv
-  /** Optional scene factory override (tests); defaults to {@link createAttentionScene}. */
-  createScene?: (canvas: HTMLCanvasElement, kind: AttentionKind, env: SceneEnv) => SceneDisposer
+  env?: CharacterEnv
+  /** Optional scene factory override (tests); defaults to {@link createCharacterScene}. */
+  createScene?: (
+    canvas: HTMLCanvasElement,
+    imageUrl: string | undefined,
+    env: CharacterEnv,
+    callbacks: { getPhase: () => CharacterPhase; kind: AttentionKind },
+  ) => CharacterDisposer
 }
 
 /** Maximum rows shown before a "+N more" tail. */
 const MAX_ROWS = 5
 
 /**
- * The attention overlay panel. Renders nothing while no session needs attention.
+ * The attention overlay panel. Renders only a small peeking character while no
+ * session needs attention; jumps out to dance and show the full panel when
+ * attention is owed.
  * @param props - the standard useSessions hook plus the open-session action.
  */
-export function AttentionPanel({ useSessions, openSession, t, env, createScene }: AttentionPanelProps) {
+export function AttentionPanel({
+  useSessions, openSession, characterImage, t, env, createScene,
+}: AttentionPanelProps) {
   const rows = useSessions(selectAttention, (a, b) => attentionRowsKey(a) === attentionRowsKey(b))
   const translate: Translate = t ?? ((key, vars) => DEFAULT_COPY[key](vars))
   const count = rows.length
+  const hasAttention = count > 0
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const first = count > 0 ? rows[0] : undefined
   const kind = first !== undefined ? first.kind : 'approval'
   const completed = isAllCompleted(rows)
+
+  // --- Lifecycle state ---
+  // State transitions are driven synchronously by `hasAttention` changes.
+  // enter→dance and exit→peek transitions are driven by a timer.
+  const [lifecycleState, setLifecycleState] = useState<LifecycleState>(INITIAL_STATE)
+  // Track when the current state began (for the character phase computation).
+  const stateStartRef = useRef(performance.now())
+
+  // Synchronous transition when hasAttention changes.
+  useEffect(() => {
+    stateStartRef.current = performance.now()
+    setLifecycleState(prev => nextState(prev, hasAttention))
+  }, [hasAttention])
+
+  // Timer-based transitions: enter→dance after ENTER_DURATION, exit→peek after EXIT_DURATION.
+  useEffect(() => {
+    /* v8 ignore next 7 -- the enter→dance timer fires after ENTER_DURATION (0.6s); tests unmount before it triggers */
+    if (lifecycleState === 'enter') {
+      const id = setTimeout(() => {
+        stateStartRef.current = performance.now()
+        setLifecycleState('dance')
+      }, ENTER_DURATION * 1000)
+      return () => clearTimeout(id)
+    }
+    /* v8 ignore next 7 -- the exit→peek timer fires after EXIT_DURATION (0.5s); tests unmount before it triggers */
+    if (lifecycleState === 'exit' && !hasAttention) {
+      const id = setTimeout(() => {
+        stateStartRef.current = performance.now()
+        setLifecycleState('peek')
+      }, EXIT_DURATION * 1000)
+      return () => clearTimeout(id)
+    }
+  }, [lifecycleState, hasAttention])
 
   // Tag the browser tab title with the pending count while attention is owed.
   useEffect(() => {
@@ -83,35 +140,46 @@ export function AttentionPanel({ useSessions, openSession, t, env, createScene }
     }
   }, [count])
 
-  // Start/stop the 3D animation while the panel is visible.
+  // Start/stop the character animation on the canvas. The character scene's
+  // own RAF loop reads the phase from a ref each frame.
   useEffect(() => {
-    if (count === 0) return
+    if (!isPanelVisible(lifecycleState)) return
     const canvas = canvasRef.current
     /* v8 ignore next -- the canvas always mounts before this effect runs */
     if (canvas === null) return
-    const sceneEnv: SceneEnv = env ?? {
+    const sceneEnv: CharacterEnv = env ?? {
       reducedMotion: prefersReducedMotion,
       requestAnimationFrame,
       cancelAnimationFrame,
+      /* v8 ignore next 5 -- default env callbacks only run when the tab visibility changes, which jsdom never fires */
       isHidden: () => document.hidden,
       onVisibilityChange: (cb) => {
         document.addEventListener('visibilitychange', cb)
         return () => { document.removeEventListener('visibilitychange', cb) }
       },
     }
-    const factory = createScene ?? createAttentionScene
+    const factory = createScene ?? createCharacterScene
     /* v8 ignore next -- defensive initializer; reassigned in both try and catch */
-    let dispose: SceneDisposer = () => {}
+    let dispose: CharacterDisposer = () => {}
     try {
-      dispose = factory(canvas, kind, sceneEnv)
+      dispose = factory(canvas, characterImage, sceneEnv, {
+        getPhase: () => phaseOf(lifecycleState, (performance.now() - stateStartRef.current) / 1000),
+        kind,
+      })
     } catch {
       dispose = () => {}
     }
     return () => { dispose() }
-  }, [count > 0, kind, env, createScene])
+  }, [lifecycleState !== 'peek', kind, env, createScene, characterImage, lifecycleState])
 
-  if (count === 0) return <></>
+  // --- Peek mode: nothing is visible. The character only appears when
+  // attention arrives — it peeks in from the edge, dances, then fully
+  // retreats. Between notifications the top-right corner is empty.
+  if (lifecycleState === 'peek') {
+    return <></>
+  }
 
+  // --- Full panel: head + character + rows ---
   const shown = rows.slice(0, MAX_ROWS)
   const hidden = count - shown.length
   const headText = (completed ? '✅ ' : '⚡ ') + translate(completed ? 'title.completed' : 'title.action') + ' · ' + String(count)
