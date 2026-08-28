@@ -63,20 +63,16 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
       let response
       const timeZone = browserTimeZone()
       if (options.mode === 'range' && options.startDate && options.endDate) {
-        response = await api.tokenUsage.dailySummaryRange({
-          startDate: options.startDate,
-          endDate: options.endDate,
-          timeZone,
-        })
+        response = await api.dailySummaryRange(options.startDate, options.endDate, timeZone)
       } else {
-        response = await api.tokenUsage.dailySummary({ date: options.date ?? todayLocalKey(), timeZone })
+        response = await api.dailySummary(options.date ?? todayLocalKey(), timeZone)
       }
-      if (!response.result.ok) {
+      if (!response.ok) {
         setStatus('error')
-        setError(response.result.error.message)
+        setError(response.error.message)
         return
       }
-      setSummary(response.result.value)
+      setSummary(response.value)
       setStatus('ready')
     } catch (err) {
       setStatus('error')

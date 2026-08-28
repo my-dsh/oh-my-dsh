@@ -1,8 +1,28 @@
+---
+description: "Token usage capture and persistence: a session/event listener that appends per-request usage records to a SQLite store behind the tokenUsageStore Service Definition."
+kind: "package-reference"
+---
+
 # @deepseek-ai/dsh-token-usage
 
 English | [中文](README.zh.md)
 
-Cross-session token-usage persistence: a SQLite-backed `TokenUsageStore` Service Definition that captures per-request provider-reported usage from the session firehose for daily, per-(provider, model) aggregation. The capture side folds step boundaries through the shared `@deepseek-ai/dsh-step-timing` primitives (`step/start` → first token chunk → `assistant/message`) — the same ones `session-stats` consumes, so the TTFT and decode durations agree with the session-scoped projection — and joins the route from the assembled message's `source` (provider/model travel with the usage on `assistant/message`).
+## Summary
+
+Cross-session token-usage persistence: a SQLite-backed `TokenUsageStore` Service Definition that captures per-request provider-reported usage from the session firehose for daily, per-(provider, model) aggregation. The capture listener folds step boundaries through the shared `@deepseek-ai/dsh-step-timing` primitives and joins the route from the assembled message's `source`.
+
+## Table of Contents
+
+- [Composition](#composition)
+- [The store contract](#the-store-contract)
+- [The per-call record](#the-per-call-record)
+- [The daily summary](#the-daily-summary)
+- [Schema versioning](#schema-versioning)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
+-----
 
 ## Composition
 
@@ -52,3 +72,13 @@ None; this package neither assembles nor sends a provider request.
 
 - **Write-only `date` column** — the writer keys each row's `date` in its own local time zone, but every read and purge bounds rows by the epoch `time` window in the caller's zone, so the column is never consulted by shipped queries; dropping it waits for the next breaking schema change.
 - **No retention policy** — the store never auto-deletes; growth is bounded by `purge()` calls. Automatic daily retention is deferred until a deployment states a volume requirement.
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+The capture listener folds step boundaries through the shared `@deepseek-ai/dsh-step-timing` primitives (`step/start` → first token chunk → `assistant/message`) — the same ones `session-stats` consumes, so the TTFT and decode durations agree with the session-scoped projection — and joins the route from the assembled message's `source` (provider/model travel with the usage on `assistant/message`).
+
+</details>

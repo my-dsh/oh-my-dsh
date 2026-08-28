@@ -1,6 +1,6 @@
 {
-  "name": "@deepseek-ai/dsh-token-usage-dashboard",
-  "description": "The Token consumption dashboard as a profile bundle: a patch layer inserting the host-side token-usage listener and its SQLite provider plus the browser dashboard panel over any web-surface profile",
+  "name": "@deepseek-ai/dsh-session-attention",
+  "description": "The session attention overlay as a profile bundle: a patch layer inserting the browser-only attention panel over any web-surface profile",
   "version": "0.1.2-alpha.1",
   "publishConfig": {
     "access": "public"
@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
-    "directory": "packages/bundle/token-usage-dashboard"
+    "directory": "packages/bundle/session-attention"
   },
   "type": "module",
   "main": "lib/index.js",
@@ -39,8 +39,7 @@
     }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-client-token-usage": "workspace:^",
-    "@deepseek-ai/dsh-token-usage": "workspace:^"
+    "@deepseek-ai/dsh-client-ui-session-attention": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-invariants": "workspace:^",

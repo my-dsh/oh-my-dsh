@@ -1,8 +1,25 @@
+---
+description: "Zero-dependency step-timing utility: elapsed and split timers for measuring agent-loop step durations."
+kind: "package-reference"
+---
+
 # dsh-step-timing
 
 English | [中文](README.zh.md)
 
+## Summary
+
 The pure timing fold of one agent-loop step: boundaries, first-token stamping, matched tool call→result wall time, message stamping, and nullable duration accessors. One zero-dependency library owns the algebra that `session-stats`'s whole-log projection and `token-usage`'s per-request capture previously implemented twice, so their TTFT and decode figures cannot drift apart.
+
+## Table of Contents
+
+- [API](#api)
+- [Usage shape](#usage-shape)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
+-----
 
 Every function is **pure and reference-stable**: a fold that observes nothing returns the identical object, so projection change feeds can gate emissions with `Object.is`, and the plain-JSON state survives persisted-cache round trips. Tool pairing matches only the step's own pending keys — a provider-minted callId colliding with an `Object` prototype property reads as unmatched, never as an inherited member. Durations clamp negative clock skew to zero; decode time requires both the first-token and message stamps.
 
@@ -55,3 +72,13 @@ None; this package neither assembles nor sends a provider request.
 - **One open step per fold** — the primitive tracks exactly the current step's boundaries; whole-log accumulation, turn counting, and multi-step state machines stay with consumers.
 - **Trusts consumer predicates** — "is this chunk a token delta" is decided by callers (the shared `isTokenDelta` helper), so an empty-delta policy change on the caller side changes TTFT here.
 - **No retry semantics** — an in-step `llm/retry` never resets the first-token boundary by design, matching the client window fold; a different policy requires a new primitive, not an option flag.
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+It is a **library, not a service or plugin**: no `ctx`, registers nothing, holds no state, emits no events. Usage guarding, route joins, turn/step counting, and record writes stay with consumers — those are durable-log or capture concerns, not timing mechanics.
+
+</details>

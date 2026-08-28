@@ -1,0 +1,14 @@
+# The session-attention bundle patch: inserts the browser-only attention
+# overlay over any web-surface profile. One row:
+#   - ui-session-attention: a pure client plugin registering one entry into
+#     `shell.overlay` — a character that peeks in and dances while any session
+#     awaits the user's action (approval / plan review / question) or a
+#     background session's reply finished unopened.
+# The plugin has no host half, no Service Definition, and no events; it reads
+# the standard `useSessions` and `useSessionPendingInteraction` feeds already
+# provided by the web surface. The bundle's substance is the patch list and
+# it carries no runtime API.
+
+- insert:
+    - id: ui-session-attention
+      name: '@deepseek-ai/dsh-client-ui-session-attention'

@@ -3,7 +3,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { AttentionPanel } from '../src/client/AttentionPanel.tsx'
 import type { Translate } from '../src/client/AttentionPanel.tsx'
 import type { AttentionKind } from '../src/client/attention.ts'
@@ -33,6 +34,26 @@ function fakeUseSessions(snapshot: SessionListState): SnapshotSelectorHook<Sessi
   }
 }
 
+/** A fake useSessionPendingInteraction that returns one fixed snapshot. */
+function fakeUsePendingInteractions(
+  snapshot: ReadonlyMap<SessionId, { kind: string }>,
+): SnapshotSelectorHook<ReadonlyMap<SessionId, { kind: string }>> {
+  return <S,>(sel: (s: ReadonlyMap<SessionId, { kind: string }>) => S): S => sel(snapshot)
+}
+
+/** Build a pending-interaction snapshot from session-id → kind entries. */
+function pending(entries: Record<string, string>): ReadonlyMap<SessionId, { kind: string }> {
+  const map = new Map<SessionId, { kind: string }>()
+  for (const [id, kind] of Object.entries(entries)) map.set(id as SessionId, { kind })
+  return map
+}
+
+/** Root standard hooks with an empty pending-interaction snapshot. */
+const noopRootHooks = {
+  useSessionPendingInteraction: fakeUsePendingInteractions(new Map<SessionId, { kind: string }>()) as never,
+  useWorkspaces: (() => undefined) as never,
+}
+
 /** A scene env whose raf never fires (so no canvas draws in jsdom). */
 const noRafEnv: CharacterEnv = { reducedMotion: () => false }
 const reducedEnv: CharacterEnv = { reducedMotion: () => true }
@@ -52,7 +73,7 @@ describe('AttentionPanel', () => {
   it('renders nothing when no session needs attention (peek mode)', () => {
     const snap = state(['a'], { a: summary('a') })
     const { container } = render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} env={noRafEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)} openSession={() => {}} env={noRafEnv} />,
     )
     // Peek mode: nothing renders — no wrap, no panel head/rows.
     expect(container.firstChild).toBeNull()
@@ -64,12 +85,14 @@ describe('AttentionPanel', () => {
     const snap = state(
       ['a', 'b'],
       {
-        a: summary('a', { pendingInteraction: 'approval', displayTitle: 'Alpha' }),
-        b: summary('b', { pendingInteraction: 'question', displayTitle: 'Beta' }),
+        a: summary('a', { displayTitle: 'Alpha' }),
+        b: summary('b', { displayTitle: 'Beta' }),
       },
     )
     render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} t={t} env={noRafEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval', b: 'question' })) as never}
+        openSession={() => {}} t={t} env={noRafEnv} />,
     )
     // Head: action title (not all completed) with count 2.
     expect(screen.getByText(/title\.action · 2/)).toBeTruthy()
@@ -82,7 +105,7 @@ describe('AttentionPanel', () => {
   it('uses the completed head text and theme when only completed rows remain', () => {
     const snap = state(['a'], { a: summary('a', { completed: true, displayTitle: 'Alpha' }) })
     const { container } = render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} t={t} env={noRafEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)} openSession={() => {}} t={t} env={noRafEnv} />,
     )
     expect(screen.getByText(/title\.completed · 1/)).toBeTruthy()
     // The completed canvas box class is applied.
@@ -90,10 +113,12 @@ describe('AttentionPanel', () => {
   })
 
   it('opens a session when a row is clicked and tags the tab title', () => {
-    const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval', displayTitle: 'Alpha' }) })
+    const snap = state(['a'], { a: summary('a', { displayTitle: 'Alpha' }) })
     const openSession = vi.fn()
     render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={openSession} env={noRafEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval' })) as never}
+        openSession={openSession} env={noRafEnv} />,
     )
     expect(document.title).toBe('(1) base')
     act(() => { screen.getByText('Alpha').closest('button')!.click() })
@@ -101,14 +126,17 @@ describe('AttentionPanel', () => {
   })
 
   it('restores the tab title when attention clears', () => {
-    const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
+    const snap = state(['a'], { a: summary('a') })
     const openSession = vi.fn()
     const { rerender } = render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={openSession} env={noRafEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval' })) as never}
+        openSession={openSession} env={noRafEnv} />,
     )
     expect(document.title).toBe('(1) base')
     rerender(
       <AttentionPanel
+        {...noopRootHooks}
         useSessions={fakeUseSessions(state(['a'], { a: summary('a') }))}
         openSession={openSession}
         env={noRafEnv}
@@ -119,18 +147,26 @@ describe('AttentionPanel', () => {
 
   it('shows a +N more tail beyond five rows', () => {
     const byId: Record<string, SessionSummary> = {}
-    for (let i = 0; i < 7; i++) byId['s' + String(i)] = summary('s' + String(i), { pendingInteraction: 'approval', displayTitle: 'S' + String(i) })
+    const pendingEntries: Record<string, string> = {}
+    for (let i = 0; i < 7; i++) {
+      byId['s' + String(i)] = summary('s' + String(i), { displayTitle: 'S' + String(i) })
+      pendingEntries['s' + String(i)] = 'approval'
+    }
     const snap = state(Object.keys(byId), byId)
     render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} t={t} env={noRafEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending(pendingEntries)) as never}
+        openSession={() => {}} t={t} env={noRafEnv} />,
     )
     expect(screen.getByText('more 2')).toBeTruthy()
   })
 
   it('starts the character scene in reduced-motion mode (one static frame) and disposes', () => {
-    const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
+    const snap = state(['a'], { a: summary('a') })
     const { unmount } = render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} env={reducedEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval' })) as never}
+        openSession={() => {}} env={reducedEnv} />,
     )
     // The panel mounted.
     expect(screen.getByText(/· 1/)).toBeTruthy()
@@ -139,9 +175,9 @@ describe('AttentionPanel', () => {
 
   it('uses the default Chinese copy for every attention kind and the +N more tail', () => {
     const byId: Record<string, SessionSummary> = {
-      a: summary('a', { pendingInteraction: 'approval', displayTitle: 'Alpha' }),
-      b: summary('b', { pendingInteraction: 'plan-review', displayTitle: 'Beta' }),
-      c: summary('c', { pendingInteraction: 'question', displayTitle: 'Gamma' }),
+      a: summary('a', { displayTitle: 'Alpha' }),
+      b: summary('b', { displayTitle: 'Beta' }),
+      c: summary('c', { displayTitle: 'Gamma' }),
       d1: summary('d1', { completed: true, displayTitle: 'Delta1' }),
       d2: summary('d2', { completed: true, displayTitle: 'Delta2' }),
       d3: summary('d3', { completed: true, displayTitle: 'Delta3' }),
@@ -149,7 +185,9 @@ describe('AttentionPanel', () => {
     }
     const snap = state(Object.keys(byId), byId)
     render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} env={noRafEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval', b: 'plan-review', c: 'question' })) as never}
+        openSession={() => {}} env={noRafEnv} />,
     )
     expect(screen.getByText(/会话需要你的操作 · 7/)).toBeTruthy()
     expect(screen.getAllByText('等待审批').length).toBeGreaterThan(0)
@@ -162,15 +200,17 @@ describe('AttentionPanel', () => {
   it('uses the default completed title when only completed rows remain', () => {
     const snap = state(['a'], { a: summary('a', { completed: true, displayTitle: 'Alpha' }) })
     render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} env={noRafEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)} openSession={() => {}} env={noRafEnv} />,
     )
     expect(screen.getByText(/回复完成 · 1/)).toBeTruthy()
   })
 
   it('builds the default scene env when no env is injected', () => {
-    const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
+    const snap = state(['a'], { a: summary('a') })
     const { unmount } = render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval' })) as never}
+        openSession={() => {}} />,
     )
     expect(screen.getByText(/· 1/)).toBeTruthy()
     expect(() => { unmount() }).not.toThrow()
@@ -178,10 +218,12 @@ describe('AttentionPanel', () => {
 
   it('falls back to a no-op dispose when the scene factory throws', () => {
     const throwFactory = (): CharacterDisposer => { throw new Error('boom') }
-    const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
+    const snap = state(['a'], { a: summary('a') })
     const { unmount } = render(
       <AttentionPanel
+        {...noopRootHooks}
         useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval' })) as never}
         openSession={() => {}}
         env={noRafEnv}
         createScene={throwFactory}
@@ -194,10 +236,12 @@ describe('AttentionPanel', () => {
   it('calls the injected scene factory and its disposer on unmount', () => {
     const disposed = vi.fn()
     const factory = vi.fn((): CharacterDisposer => () => { disposed() })
-    const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
+    const snap = state(['a'], { a: summary('a') })
     const { unmount } = render(
       <AttentionPanel
+        {...noopRootHooks}
         useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval' })) as never}
         openSession={() => {}}
         env={noRafEnv}
         createScene={factory}
@@ -210,8 +254,8 @@ describe('AttentionPanel', () => {
 
   it('passes the highest-priority kind to the scene factory', () => {
     const snap = state(['b', 'a'], {
-      a: summary('a', { pendingInteraction: 'question' }),
-      b: summary('b', { pendingInteraction: 'plan-review' }),
+      a: summary('a'),
+      b: summary('b'),
     })
     const factory = vi.fn(
       (_c: HTMLCanvasElement, _img: string | undefined, _e: CharacterEnv,
@@ -219,7 +263,9 @@ describe('AttentionPanel', () => {
     )
     const { unmount } = render(
       <AttentionPanel
+        {...noopRootHooks}
         useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'question', b: 'plan-review' })) as never}
         openSession={() => {}}
         env={noRafEnv}
         createScene={factory}
@@ -238,6 +284,7 @@ describe('AttentionPanel', () => {
     )
     const { unmount } = render(
       <AttentionPanel
+        {...noopRootHooks}
         useSessions={fakeUseSessions(snap)}
         openSession={() => {}}
         env={noRafEnv}
@@ -249,14 +296,16 @@ describe('AttentionPanel', () => {
   })
 
   it('accepts a characterImage prop and passes it to the scene factory', () => {
-    const snap = state(['a'], { a: summary('a', { pendingInteraction: 'approval' }) })
+    const snap = state(['a'], { a: summary('a') })
     const factory = vi.fn(
       (_c: HTMLCanvasElement, _img: string | undefined, _e: CharacterEnv,
         _cb: { getPhase: () => CharacterPhase; kind: AttentionKind }): CharacterDisposer => () => {},
     )
     render(
       <AttentionPanel
+        {...noopRootHooks}
         useSessions={fakeUseSessions(snap)}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval' })) as never}
         openSession={() => {}}
         characterImage="data:image/png;base64,abc"
         env={noRafEnv}
@@ -269,14 +318,16 @@ describe('AttentionPanel', () => {
   it('transitions from peek to panel when attention arrives', () => {
     const snap = state(['a'], { a: summary('a') })
     const { rerender } = render(
-      <AttentionPanel useSessions={fakeUseSessions(snap)} openSession={() => {}} env={noRafEnv} />,
+      <AttentionPanel {...noopRootHooks} useSessions={fakeUseSessions(snap)} openSession={() => {}} env={noRafEnv} />,
     )
     // Initially peek: no panel head.
     expect(screen.queryByText(/· \d/)).toBeNull()
     // Attention arrives.
     rerender(
       <AttentionPanel
-        useSessions={fakeUseSessions(state(['a'], { a: summary('a', { pendingInteraction: 'approval', displayTitle: 'Alpha' }) }))}
+        {...noopRootHooks}
+        useSessions={fakeUseSessions(state(['a'], { a: summary('a', { displayTitle: 'Alpha' }) }))}
+        useSessionPendingInteraction={fakeUsePendingInteractions(pending({ a: 'approval' })) as never}
         openSession={() => {}}
         env={noRafEnv}
       />,

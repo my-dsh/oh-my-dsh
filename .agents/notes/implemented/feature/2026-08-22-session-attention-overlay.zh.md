@@ -30,13 +30,14 @@ Status: implemented
 
 ## 后果
 
-切到后台的标签页用户在标题看到提醒，回到页面看到持续的 3D 面板与每个等待会话的名字和颜色，直到处理完每一个。包向 `packages/bundle/web-app/cordis.patch.yml` 与 web-app manifest 各加一行，assembled-boot 快照固定其注册与 fixture 的待提问行。
+切到后台的标签页用户在标题看到提醒，回到页面看到持续的 3D 面板与每个等待会话的名字和颜色，直到处理完每一个。面板作为独立 bundle `@deepseek-ai/dsh-session-attention`（一个 `cordis.patch.yml` 行）发布，可安装到任何 web 界面 profile 上；assembled-boot 快照固定其注册与 fixture 的待提问行。
 
 ## 测试
 
-`attention.client.spec.ts` 覆盖纯选择、key 与完成逻辑，以及 `computeScene` 的每类几何（每个种类都产出互不相同且有效的场景）；`scene.client.spec.ts` 覆盖投影数学、精灵贴图的 `paintFrame` 与 `createAttentionScene` 生命周期（一帧循环、reduced-motion 静态帧、无 raf 销毁、空上下文无操作）。`panel.client.spec.tsx` 在可注入场景工厂的假 `useSessions` 下渲染 `AttentionPanel`，覆盖空渲染、各提醒种类、完成主题、最高优先级种类驱动场景工厂、点击打开、标题打标与恢复、+N 尾巴、reduced-motion、默认文案路径与抛错的场景工厂。`apply.client.spec.tsx` 覆盖 `shell.overlay` 注册、延迟注入、打开会话动作与拆卸。`apps/web/tests/session-attention.snapshot.ts` 以 keyless fixture transport 引导组装好的构建图，固定覆盖层的 wrap 存在、头计数、fixture 的待提问行与已打标的标签页标题。
+`attention.client.spec.ts` 覆盖纯选择（由 `SessionListState` 与 `useSessionPendingInteraction` 快照双驱动）、key 与完成逻辑，以及 `computeScene` 的每类几何（每个种类都产出互不相同且有效的场景）；`scene.client.spec.ts` 覆盖投影数学、精灵贴图的 `paintFrame` 与 `createAttentionScene` 生命周期（一帧循环、reduced-motion 静态帧、无 raf 销毁、空上下文无操作）。`panel.client.spec.tsx` 在假 `useSessions` 与 `useSessionPendingInteraction` hook 及可注入场景工厂下渲染 `AttentionPanel`，覆盖空渲染、各提醒种类、完成主题、最高优先级种类驱动场景工厂、点击打开、标题打标与恢复、+N 尾巴、reduced-motion、默认文案路径与抛错的场景工厂。`apply.client.spec.tsx` 覆盖 `shell.overlay` 注册、延迟注入、打开会话动作与拆卸。`apps/web/tests/session-attention.snapshot.ts` 以 keyless fixture transport 引导组装好的构建图，固定覆盖层的 wrap 存在、头计数、fixture 的待提问行与已打标的标签页标题。
 
 ## 相关
 
 - [槽位系统标准](../architecture/2026-07-22-slot-type-chain-implementation.zh.md)——覆盖层条目使用的 `ctx.slots.inject` 延迟注册。
 - [包不变量运行时契约](../architecture/2026-07-19-package-invariant-runtime-contracts.zh.md)——本包遵循的空不变量伴随模式。
+- [修复 pendingInteraction 数据流与独立 bundle](../bug-fix/2026-08-28-session-attention-pending-interaction-fix.zh.md)——数据源修复与 bundle 提取。

@@ -27,8 +27,6 @@ export interface SessionListEntry {
   cwd?: string
   /** Current host-computed projection values for list consumers. */
   projectionValues?: Readonly<Partial<SessionProjectionMap>>
-  /** User interaction currently blocking this session, derived from live mux frames. */
-  pendingInteraction?: PendingInteractionStatus
   /** Finished running while not selected and not yet opened — the sidebar's green "done" reminder (clears on select or the next run). */
   completed: boolean
   /** Lineage indent depth: root = 0; the UI just multiplies by the indent width. */

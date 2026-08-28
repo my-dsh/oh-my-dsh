@@ -11,11 +11,15 @@
  *
  * Export discipline: packages/client/AGENTS.md.
  */
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
 // Type-only: pulls the shell.overlay SlotMap declaration (the key's owner)
 // into this program so the overlay registration below typechecks against the
 // real declaration — no runtime edge to ui-layout.
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+// Type-only: pulls the SlotRegistry service merge (ctx.slots).
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+// Type-only: pulls the Session standard-hook merge (useSessions on root props).
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import { AttentionPanel } from './AttentionPanel.tsx'
 import type { SessionAttentionInjected } from './contract/slots.ts'
 
@@ -29,8 +33,8 @@ export interface Config {
   characterImage?: string
 }
 
-/** Services required by the session-attention plugin: the slot registry only. */
-export const inject = ['slots']
+/** Services required by the session-attention plugin: the slot registry and the sessions service. */
+export const inject = ['slots', 'sessions']
 
 /**
  * Client plugin body: contribute the attention entry to the shell overlay once
@@ -41,9 +45,9 @@ export const inject = ['slots']
  * @param config - plugin config (character image URL).
  */
 export function apply(ctx: ClientContext, config: Config = {}): void {
+  const sessions = ctx.get('sessions')
   const injected = (): SessionAttentionInjected => ({
     openSession: (id) => {
-      const sessions = ctx.get('sessions')
       if (sessions !== undefined) sessions.open(id as never)
     },
   })

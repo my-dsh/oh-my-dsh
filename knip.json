@@ -117,6 +117,19 @@
         "@deepseek-ai/dsh-client-ui-input-trigger"
       ]
     },
+    "packages/client/token-usage": {
+      "entry": [
+        "tests/**/*.spec.tsx"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "tests/**/*.tsx"
+      ],
+      "ignoreDependencies": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    },
     "packages/client/ui-primitives": {
       "entry": [
         "tests/**/*.spec.tsx"
@@ -325,6 +338,18 @@
         "@deepseek-ai/dsh-session-checkpoint-policy",
         "@deepseek-ai/dsh-session-persistence-jsonl",
         "@deepseek-ai/dsh-subprocess-local"
+      ]
+    },
+    "packages/session/token-usage": {
+      "entry": [
+        "tests/**/*.spec.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "tests/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "zod"
       ]
     },
     "packages/util/brand": {
@@ -745,6 +770,13 @@
       ]
     },
     "packages/bundle/token-usage-dashboard": {
+      "ignoreDependencies": [
+        "@deepseek-ai/.+"
+      ],
+      "entry": [],
+      "project": []
+    },
+    "packages/bundle/session-attention": {
       "ignoreDependencies": [
         "@deepseek-ai/.+"
       ],

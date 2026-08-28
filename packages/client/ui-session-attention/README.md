@@ -1,8 +1,24 @@
+---
+description: "Web GUI session-attention overlay plugin: a character dance animation in shell.overlay while any session awaits the user's action or a background reply finished unopened."
+kind: "package-reference"
+---
+
 # @deepseek-ai/dsh-client-ui-session-attention
 
 English | [中文](README.zh.md)
 
-Web GUI session-attention overlay plugin: its browser half contributes one entry to the root-scoped `shell.overlay` list slot (owned and declared by `dsh-client-ui-layout`). The entry watches the standard `useSessions` feed — the same data the sidebar status dots use — and renders a character that peeks in from the top-right edge, jumps out to play a kind-specific dance when any session awaits the user's action (approval / plan review / question) or a background session's AI reply finished without being opened since, then retreats back to its peek pose when all sessions are handled. Its host half is empty on purpose; the plugin is pure presentation and owns no host-side behavior.
+## Summary
+
+Web GUI session-attention overlay plugin: its browser half contributes one entry to the root-scoped `shell.overlay` list slot (owned and declared by `dsh-client-ui-layout`). The entry watches the standard `useSessions` and `useSessionPendingInteraction` feeds and renders a character that peeks in from the top-right edge, jumps out to play a kind-specific dance when any session awaits the user's action (approval / plan review / question) or a background session's AI reply finished without being opened since, then retreats when all sessions are handled. Its host half is empty on purpose; the plugin is pure presentation and owns no host-side behavior.
+
+## Table of Contents
+
+- [Configuration](#configuration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
+-----
 
 The character lifecycle is a four-phase state machine: `peek → enter → dance → exit → peek`. In the `peek` phase only a small slice of the character is visible in the top-right corner (clipped by an overflow-hidden container), barely occupying the interface. When attention arrives the character transitions to `enter` (slides up with an elastic overshoot), then to `dance` where it plays one of four kind-specific animations, then to `exit` when all sessions are handled, and finally back to `peek`. While attention is owed the browser tab title is prefixed with `(N)` so the reminder survives a backgrounded tab.
 
@@ -10,6 +26,7 @@ The character can be a user-supplied PNG (configured through the plugin's `chara
 
 Each attention row carries its session's status color and localized kind label, and clicking a row opens that session in the sidebar so the user can act on it. Rows sort by kind priority (waiting first) then by session id, and at most five rows render before a "+N more" tail.
 
+<a id="configuration"></a>
 ## Configuration
 
 The `characterImage` plugin config key accepts a URL or data-URI for a custom character PNG. When unset, the procedural fallback creature is used. Example `cordis.yml`:
@@ -21,6 +38,7 @@ The `characterImage` plugin config key accepts a URL or data-URI for a custom ch
     characterImage: 'data:image/png;base64,...'
 ```
 
+<a id="model-experience"></a>
 ## Model Experience
 
 None, as the overlay renders the existing browser session list; nothing here reaches a model request.
@@ -31,5 +49,17 @@ None; this package neither assembles nor sends a provider request.
 
 ## Known Limitations and Deferred Work
 
+<a id="known-limitations-and-deferred-work"></a>
+
 - **The character PNG load path is browser-only** — jsdom's `Image` never fires `onload`/`onerror`, so the PNG blit path is only exercised in a real browser; jsdom tests always render the procedural fallback.
 - **No locale namespace** — copy rides injected defaults (Chinese) rather than the standard locale seat, so a locale switch does not re-translate the panel. Wiring `dsh-client-locale` is a localized follow-up if the panel needs translation.
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+The overlay reads pending interactions from the `useSessionPendingInteraction` standard hook, not from `SessionListState.byId.pendingInteraction` — `projectList()` never populates that field. See the [pendingInteraction data flow fix](../../../.agents/notes/implemented/bug-fix/2026-08-28-session-attention-pending-interaction-fix.md).
+
+</details>

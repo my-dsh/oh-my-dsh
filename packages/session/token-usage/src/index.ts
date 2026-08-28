@@ -16,8 +16,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { isTokenDelta } from '@deepseek-ai/dsh-llm/message'
-import type { TokenUsage } from '@deepseek-ai/dsh-llm/types'
+import type { StreamChunk, TokenUsage } from '@deepseek-ai/dsh-llm/types'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { StepTimingFold } from '@deepseek-ai/dsh-step-timing'
 import {
@@ -33,8 +32,28 @@ import {
 import { dayKey } from './store.ts'
 import type { TokenUsageEventRecord } from './types.ts'
 
+/* jscpd:ignore-start -- Token Usage owns its per-call timing capture independently. */
+
+/** Whether a stream chunk carries a non-empty first-token delta. */
+function isTokenDelta(chunk: StreamChunk): boolean {
+  switch (chunk.type) {
+    case 'text-delta':
+    case 'reasoning-delta':
+      return chunk.text !== ''
+    case 'tool-call-delta':
+      return chunk.argumentsDelta !== '' || chunk.name !== undefined
+    default:
+      return false
+  }
+}
+
+/* jscpd:ignore-end */
+
 export type { TokenUsageDailyGroup, TokenUsageDailySummary, TokenUsageDailySummaryView, TokenUsageEventRecord, TokenUsageGroupView, TokenUsagePurgeRequest, TokenUsagePurgeResult, TokenUsageStore } from './types.ts'
 export { SqliteTokenUsageStore, TOKEN_USAGE_APPLICATION_ID, TOKEN_USAGE_SCHEMA_VERSION, dayKey, openTokenUsageDatabase } from './store.ts'
+// Type-only re-export so the Typert generator reaches the Remote service in
+// `remote.ts` from the public `.` entry; the runtime Remote bundle is `./remote`.
+export type { TokenUsageRemoteService } from './remote.ts'
 
 /** Cordis plugin name. */
 export const name = 'token-usage'
