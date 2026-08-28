@@ -8,6 +8,12 @@
   align-items: flex-end;
   gap: 10px;
   pointer-events: none;
+  animation: dshSa3dEnter .5s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+@keyframes dshSa3dEnter {
+  from { opacity: 0; transform: translateX(20px) translateY(-30px) scale(.8); }
+  to { opacity: 1; transform: translateX(0) translateY(0) scale(1); }
 }
 
 .panel {
@@ -21,12 +27,6 @@
   border: 1px solid rgba(255, 255, 255, .13);
   box-shadow: 0 18px 50px rgba(0, 0, 0, .4);
   overflow: hidden;
-  animation: dshSa3dIn .28s ease;
-}
-
-@keyframes dshSa3dIn {
-  from { opacity: 0; transform: translateX(16px) scale(.97); }
-  to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
 .head {
