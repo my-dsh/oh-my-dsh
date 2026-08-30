@@ -162,6 +162,14 @@ const homeAndGuide = pairedPages([
     section: { root: '集成', en: 'Integrations' },
     order: 1,
   },
+  {
+    source: 'docs/user/guide/community-plugins.md',
+    route: 'guide/community-plugins.md',
+    label: { root: '社区插件', en: 'Community plugins' },
+    sidebar: { root: 'zh-guide', en: 'en-guide' },
+    section: { root: '集成', en: 'Integrations' },
+    order: 2,
+  },
 ])
 
 const develop = pairedPages([
