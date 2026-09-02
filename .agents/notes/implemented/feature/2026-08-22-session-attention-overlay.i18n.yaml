@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-22-session-attention-overlay.md
-2026-08-22-session-attention-overlay.md: 72ea709e766ffee9645617fc33722ac6f215eb7a
-2026-08-22-session-attention-overlay.zh.md: 547cb2311626d25124397d36e3993e662049654b
+2026-08-22-session-attention-overlay.md: c4a261d754e74a6c2fec47d77d5a759d5f0e302c
+2026-08-22-session-attention-overlay.zh.md: b305e745ffe4b56d212e9df6d3ca1b1fb0f15856

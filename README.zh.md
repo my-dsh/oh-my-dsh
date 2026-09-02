@@ -22,7 +22,7 @@ DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的�
 
 ### 会话提醒
 
-当某个后台会话正在等待用户（待审批 / 待计划审阅 / 待提问等 `pendingInteraction`，或已完成但尚未打开的 AI 回复）时，Web GUI 右上角会浮现一个浮动覆盖层（`@deepseek-ai/dsh-client-ui-session-attention`）。它会为标签页标题加上 `(N)` 前缀，并根据当前最高优先级的提醒种类播放四套不同的 Canvas2D 动画之一，让用户一眼分辨是哪种提醒。详见 [session-attention 包](packages/client/ui-session-attention/README.zh.md)。
+当某个后台会话正在等待用户（待审批 / 待计划审阅 / 待提问等 `pendingInteraction`，或已完成但尚未打开的 AI 回复）时，Web GUI 右上角会浮现一个浮动覆盖层。它会为标签页标题加上 `(N)` 前缀，并根据当前最高优先级的提醒种类播放四套不同的 Canvas2D 动画之一，让用户一眼分辨是哪种提醒。该插件在独立仓库 [`dsh-session-attention`](https://github.com/my-dsh/dsh-session-attention) 中开发；安装方式见[社区插件指南](docs/user/guide/community-plugins.zh.md)。
 
 ![会话提醒覆盖层：提示有待用户处理的会话](docs/media/session-attention.png)
 
