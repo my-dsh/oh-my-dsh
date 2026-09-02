@@ -22,7 +22,7 @@ This repository adds two capabilities on top of the upstream DeepSeek Harness.
 
 ### Session attention reminders
 
-When a background session awaits the user — a pending interaction (approval / plan review / question) or a finished AI reply not yet opened — a floating overlay (`@deepseek-ai/dsh-client-ui-session-attention`) appears in the top-right of the Web GUI. It tags the tab title `(N)` and plays one of four distinct Canvas2D animations keyed by the highest-priority attention kind, so you can tell at a glance what kind of reminder is owed. See the [session-attention package](packages/client/ui-session-attention/README.md).
+When a background session awaits the user — a pending interaction (approval / plan review / question) or a finished AI reply not yet opened — a floating overlay appears in the top-right of the Web GUI. It tags the tab title `(N)` and plays one of four distinct Canvas2D animations keyed by the highest-priority attention kind, so you can tell at a glance what kind of reminder is owed. The plugin is developed in the standalone [`dsh-session-attention` repository](https://github.com/my-dsh/dsh-session-attention); see the [community plugins guide](docs/user/guide/community-plugins.md) for installation.
 
 ![The session-attention overlay announcing sessions awaiting the user](docs/media/session-attention.png)
 

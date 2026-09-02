@@ -1,6 +1,0 @@
-wrap=present
-title-tagged=true
-head=⚡ 会话需要你的操作 · 1
-rows=1
-row kind=question title=Fixture 历史会话
-more=<none>
