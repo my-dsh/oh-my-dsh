@@ -105,6 +105,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--dsw-static-deepseek-500);
   animation: dsh-turn-status-dot 1.2s ease-in-out infinite;
 }

@@ -58,6 +58,8 @@ patch 文档（[`cordis.patch.yml`](cordis.patch.yml)）插入四行：
 
 </details>
 
+不发布运行时不变量 companion：bundle 的模块不携带任何运行时 API——它的实质内容是 `cordis.patch.yml`，被插入的各包拥有各自的行为及其校验。
+
 -----
 
 <a id="model-experience"></a>
@@ -68,7 +70,6 @@ patch 文档（[`cordis.patch.yml`](cordis.patch.yml)）插入四行：
 #### KV Cache 影响
 
 无；两条插入的宿主行与客户端面板都不装配、也不发送 provider 请求。
-
 
 ## Known Limitations and Deferred Work
 

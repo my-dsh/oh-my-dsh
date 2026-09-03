@@ -25,6 +25,8 @@ Every function is **pure and reference-stable**: a fold that observes nothing re
 
 It is a **library, not a service or plugin**: no `ctx`, registers nothing, holds no state, emits no events. Usage guarding, route joins, turn/step counting, and record writes stay with consumers — those are durable-log or capture concerns, not timing mechanics.
 
+No invariant companion is published because the pure fold owns no event stream or mutable runtime data; its pairing and clamping algebra is enforced by unit tests against controlled event times.
+
 ## API
 
 ```ts

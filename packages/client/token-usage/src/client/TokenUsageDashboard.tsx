@@ -37,7 +37,7 @@ type DateMode = 'day' | 'range'
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 /** Props delivered by the slot outlet: the inject face spread flat. */
-export type TokenUsageDashboardProps = Partial<TokenUsageDashboardInjected>
+export type TokenUsageDashboardProps = TokenUsageDashboardInjected
 
 /**
  * The dashboard overlay entry: a FAB pinned bottom-right, opening a modal
@@ -56,7 +56,6 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
   const [summary, setSummary] = useState<TokenUsageDailySummaryView | null>(null)
 
   const load = useCallback(async (options: { mode: DateMode; date?: string; startDate?: string; endDate?: string }) => {
-    if (api === undefined) return
     setStatus('loading')
     setError(null)
     try {
@@ -91,7 +90,7 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
       <button
         type="button"
         className={css.fab}
-        aria-label={t?.('fab.label') ?? 'Token usage'}
+        aria-label={t('fab.label')}
         onClick={() => { setOpen(true) }}
       >
         <IconDataOutline16 size={18} />
@@ -99,8 +98,8 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
       <Modal
         open={open}
         onClose={() => { setOpen(false) }}
-        title={t?.('panel.title') ?? 'Token usage'}
-        closeLabel={t?.('close') ?? 'Close'}
+        title={t('panel.title')}
+        closeLabel={t('close')}
         className={clsx(css.modal)}
         contentClassName={clsx(css.content)}
       >
@@ -116,7 +115,7 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
                 setDate(today)
               }}
             >
-              {t?.('preset.today') ?? 'Today'}
+              {t('preset.today')}
             </Button>
             <Button
               size="sm"
@@ -128,7 +127,7 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
                 setDate(yesterday)
               }}
             >
-              {t?.('preset.yesterday') ?? 'Yesterday'}
+              {t('preset.yesterday')}
             </Button>
             <Button
               size="sm"
@@ -142,7 +141,7 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
                 setEndDate(today)
               }}
             >
-              {t?.('preset.last7') ?? 'Last 7 days'}
+              {t('preset.last7')}
             </Button>
             <Button
               size="sm"
@@ -156,7 +155,7 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
                 setEndDate(today)
               }}
             >
-              {t?.('preset.thisMonth') ?? 'This month'}
+              {t('preset.thisMonth')}
             </Button>
             <Button
               size="sm"
@@ -170,7 +169,7 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
                 setEndDate(end)
               }}
             >
-              {t?.('preset.lastMonth') ?? 'Last month'}
+              {t('preset.lastMonth')}
             </Button>
             <div className={css.dateInputWrap}>
               <svg className={css.dateIcon} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -202,19 +201,19 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
             onClick={() => { void load({ mode, date, startDate, endDate }) }}
             className={css.refreshButton}
           >
-            {t?.('refresh') ?? 'Refresh'}
+            {t('refresh')}
           </Button>
         </div>
-        {status === 'loading' && <p className={css.status}>{t?.('loading') ?? 'Loading…'}</p>}
+        {status === 'loading' && <p className={css.status}>{t('loading')}</p>}
         {status === 'error' && (
           <p className={css.error}>
-            {t?.('error') ?? 'Failed to load token usage'}
+            {t('error')}
             {error !== null && `: ${error}`}
           </p>
         )}
         {status === 'ready' && summary !== null && summary.groups.length === 0 && (
           <p className={css.status}>
-            {t?.('empty') ?? 'No token usage recorded'}
+            {t('empty')}
             {mode === 'range' ? ` (${startDate} ~ ${endDate})` : ` (${date})`}
           </p>
         )}
@@ -234,7 +233,7 @@ function KpiCards({
   t,
 }: {
   totals: TokenUsageGroupView
-  t: ((key: DashboardKey) => string) | undefined
+  t: (key: DashboardKey) => string
 }) {
   const totalInput = totals.uncachedInputTokens
   const cachedInput = totals.cacheReadTokens + totals.cacheWriteTokens
@@ -242,47 +241,49 @@ function KpiCards({
   const totalTokens = totalInput + cachedInput + totalOutput
   const cacheHitHint = useMemo(() => {
     if (totals.cacheHitRatio === null) return undefined
-    return totals.cacheHitRatio >= 0.8 ? t?.('kpi.cacheHitHighHint') : undefined
+    return totals.cacheHitRatio >= 0.8 ? t('kpi.cacheHitHighHint') : undefined
   }, [totals.cacheHitRatio, t])
 
   return (
     <section className={css.kpiSection}>
       <div className={css.kpiGrid}>
         <div className={css.kpiCard}>
-          <span className={css.kpiLabel}>{t?.('kpi.totalTokens') ?? 'Total tokens'}</span>
+          <span className={css.kpiLabel}>{t('kpi.totalTokens')}</span>
           <span className={css.kpiValue}>{formatTokens(totalTokens)}</span>
           <span className={css.kpiHint}>
-            {`${formatTokens(totalInput + cachedInput)} in · ${formatTokens(totalOutput)} out`}
+            {t('kpi.inputOutputSplit')
+              .replaceAll('{input}', formatTokens(totalInput + cachedInput))
+              .replaceAll('{output}', formatTokens(totalOutput))}
           </span>
         </div>
         <div className={css.kpiCard}>
-          <span className={css.kpiLabel}>{t?.('kpi.cacheHit') ?? 'Cache hit'}</span>
+          <span className={css.kpiLabel}>{t('kpi.cacheHit')}</span>
           <span className={clsx(css.kpiValue, totals.cacheHitRatio !== null && totals.cacheHitRatio >= 0.8 ? css.cacheHitHigh : undefined)}>
             {formatCacheHit(totals)}
           </span>
           <span className={css.kpiHint}>{cacheHitHint ?? ''}</span>
         </div>
         <div className={css.kpiCard}>
-          <span className={css.kpiLabel}>{t?.('kpi.ttft') ?? 'Avg TTFT'}</span>
+          <span className={css.kpiLabel}>{t('kpi.ttft')}</span>
           <span className={clsx(css.kpiValue, (totals.averageTtftMs ?? 0) >= 3000 ? css.ttftWarn : undefined)}>
             {formatTtftSeconds(totals.averageTtftMs)}
           </span>
-          <span className={css.kpiHint}>{t?.('kpi.firstToken') ?? 'First token latency'}</span>
+          <span className={css.kpiHint}>{t('kpi.firstToken')}</span>
         </div>
         <div className={css.kpiCard}>
-          <span className={css.kpiLabel}>{t?.('kpi.totalRequests') ?? 'Requests'}</span>
+          <span className={css.kpiLabel}>{t('kpi.totalRequests')}</span>
           <span className={css.kpiValue}>{totals.requests.toLocaleString('en-US')}</span>
-          <span className={css.kpiHint}>{t?.('kpi.requestUnit') ?? 'Recorded requests'}</span>
+          <span className={css.kpiHint}>{t('kpi.requestUnit')}</span>
         </div>
         <div className={css.kpiCard}>
-          <span className={css.kpiLabel}>{t?.('kpi.turns') ?? 'Turns'}</span>
+          <span className={css.kpiLabel}>{t('kpi.turns')}</span>
           <span className={css.kpiValue}>{totals.turns.toLocaleString('en-US')}</span>
-          <span className={css.kpiHint}>{t?.('kpi.turnsUnit') ?? 'Recorded turns'}</span>
+          <span className={css.kpiHint}>{t('kpi.turnsUnit')}</span>
         </div>
         <div className={css.kpiCard}>
-          <span className={css.kpiLabel}>{t?.('kpi.llm') ?? 'Avg time'}</span>
+          <span className={css.kpiLabel}>{t('kpi.llm')}</span>
           <span className={css.kpiValue}>{formatDuration(totals.averageLlmMs)}</span>
-          <span className={css.kpiHint}>{t?.('kpi.llmHint') ?? 'Avg LLM step time'}</span>
+          <span className={css.kpiHint}>{t('kpi.llmHint')}</span>
         </div>
       </div>
     </section>
@@ -298,7 +299,7 @@ function SummaryTable({
   t,
 }: {
   summary: TokenUsageDailySummaryView
-  t: ((key: DashboardKey) => string) | undefined
+  t: (key: DashboardKey) => string
 }) {
   const rows = useMemo(() => orderedGroups(summary), [summary])
   return (
@@ -306,19 +307,19 @@ function SummaryTable({
       <table className={css.table}>
         <thead>
           <tr>
-            <th className={css.colProvider}>{t?.('col.provider') ?? 'Provider'}</th>
-            <th className={css.colModel}>{t?.('col.model') ?? 'Model'}</th>
-            <th className={css.numCol}>{t?.('col.turns') ?? 'Turns'}</th>
-            <th className={css.numCol}>{t?.('col.uncachedInput') ?? 'Uncached input'}</th>
-            <th className={css.numCol}>{t?.('col.cacheRead') ?? 'Cache read'}</th>
-            <th className={css.numCol}>{t?.('col.cacheWrite') ?? 'Cache write'}</th>
-            <th className={css.numCol}>{t?.('col.output') ?? 'Output'}</th>
-            <th className={css.numCol}>{t?.('col.cacheHit') ?? 'Cache hit'}</th>
-            <th className={css.numCol}>{t?.('col.throughput') ?? 'Avg speed'}</th>
-            <th className={css.numCol}>{t?.('col.ttft') ?? 'Avg TTFT'}</th>
-            <th className={css.numCol}>{t?.('col.llm') ?? 'Avg time'}</th>
-            <th className={css.numCol}>{t?.('col.tool') ?? 'Tool time'}</th>
-            <th className={css.numCol}>{t?.('col.requests') ?? 'Requests'}</th>
+            <th className={css.colProvider}>{t('col.provider')}</th>
+            <th className={css.colModel}>{t('col.model')}</th>
+            <th className={css.numCol}>{t('col.turns')}</th>
+            <th className={css.numCol}>{t('col.uncachedInput')}</th>
+            <th className={css.numCol}>{t('col.cacheRead')}</th>
+            <th className={css.numCol}>{t('col.cacheWrite')}</th>
+            <th className={css.numCol}>{t('col.output')}</th>
+            <th className={css.numCol}>{t('col.cacheHit')}</th>
+            <th className={css.numCol}>{t('col.throughput')}</th>
+            <th className={css.numCol}>{t('col.ttft')}</th>
+            <th className={css.numCol}>{t('col.llm')}</th>
+            <th className={css.numCol}>{t('col.tool')}</th>
+            <th className={css.numCol}>{t('col.requests')}</th>
           </tr>
         </thead>
         <tbody>

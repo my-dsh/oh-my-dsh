@@ -58,6 +58,8 @@ The listener injects `tokenUsageStore`, so it activates only after the provider 
 
 </details>
 
+No invariant companion is published because the bundle's module carries no runtime API — its substance is `cordis.patch.yml`, and the inserted packages own their behavior and its checks.
+
 -----
 
 <a id="model-experience"></a>

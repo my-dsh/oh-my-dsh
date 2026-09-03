@@ -23,6 +23,8 @@ Web GUI 的 Token 消耗看板。固定在 shell 右下角的浮动按钮打开�
 
 表格主体是按 `(provider, model)` 的分组聚合；跨组总计行渲染在最前并加粗。每个展示值都是宿主返回汇总的纯函数：消耗速度为 `outputTokens / (decodeMs / 1000)`（按 decode 加权），TTFT 为算术平均 `ttftMs / ttftSamples`，缓存命中率为 `cacheReadTokens / (uncachedInputTokens + cacheReadTokens + cacheWriteTokens)`。宿主在数据穿越 wire 前已推导出这些均值，因此面板与宿主的定义完全一致。跨组总计卡片汇总全部四个桶（计费 Token：未缓存输入加上缓存读、缓存写与输出），而非仅未缓存输入加输出。
 
+不发布运行时不变量 companion：看板是浏览器侧的纯展示（悬浮按钮 + 面板），注册进由其他包拥有的 slot；它不发出任何 cordis 事件、不拥有跨插件可变状态，其注销由 slot 注册的 HMR 安全测试证明。
+
 <a id="model-experience"></a>
 ## Model Experience
 
