@@ -23,6 +23,8 @@ The plugin contributes one entry to the root-scoped `shell.overlay` list slot (o
 
 The grouped rows are the per-`(provider, model)` aggregates; a cross-group totals row renders first, emphasized. Every displayed value is a pure function of the summary the host returns: throughput is `outputTokens / (decodeMs / 1000)` (decode-weighted), TTFT is the arithmetic mean `ttftMs / ttftSamples`, and the cache-hit ratio is `cacheReadTokens / (uncachedInputTokens + cacheReadTokens + cacheWriteTokens)`. The host derives those averages before they cross the wire, so the panel mirrors the host's definitions exactly. The cross-group total card sums all four buckets (billed tokens: uncached input plus cache reads and writes plus output), not uncached input plus output alone.
 
+No invariant companion is published because the dashboard is a browser-side pure presentation (FAB + panel) registering into a slot owned by another package; it emits no cordis events and owns no cross-plugin mutable state, and its disposal is proven by the slot registration's HMR-safety test.
+
 <a id="model-experience"></a>
 ## Model Experience
 

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/util/zoned-time/README.md
-README.md: e20d87074a3ba28013bc35a4553d0c42ed88aa25
-README.zh.md: 46d9c4d1c953de3a82008974d028dceac2456ce7
+README.md: 0384e1871b12a3c0fa9aaa1df3b2a568dc85b237
+README.zh.md: 23ffade2397950544295c657c1f2f421851670a8

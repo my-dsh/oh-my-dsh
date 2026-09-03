@@ -60,6 +60,8 @@ One row per (session, turn, step): `time`, `date`, `sessionId`, `provider`, `mod
 
 The database carries its own monotonic `SCHEMA_VERSION` (currently 3), independent of the session-persistence schema. An empty database initializes at the current version; every other version rejects rather than migrating in place (pre-release stance: backends reject old on-disk formats). The `(time)` index serves both summary reads and `purge`, which all bound rows by epoch `time`; the append-time `date` column stays write-only metadata.
 
+No invariant companion is published because the capture fold consumes event relations owned and runtime-checked elsewhere (the agent loop's one `step/end` per entered step, monotonic turn numbers, and `assistant/message` step coordinates), and the store contains its own write errors so a capture failure never escapes into the agent loop.
+
 ## Model Experience
 
 None, as the package only observes the session stream and persists provider-reported accounting; it never contributes to a model request.

@@ -1,18 +1,18 @@
 import { defineConfig } from 'tsdown'
 
 /**
- * Node-only host package. The capture plugin and its invariant companion
- * build as the default ESM entry; the SQLite provider (the `./sqlite-provider`
- * export the bundle's `token-usage-sqlite` row names) builds as its own entry
- * so it carries its `node:sqlite` import without forcing it on the capture
- * plugin's consumers; the Remote service (the `./remote` export the
- * `token-usage-remote` row names) builds as its own entry so it carries its
+ * Node-only host package. The capture plugin builds as the default ESM
+ * entry; the SQLite provider (the `./sqlite-provider` export the bundle's
+ * `token-usage-sqlite` row names) builds as its own entry so it carries its
+ * `node:sqlite` import without forcing it on the capture plugin's consumers;
+ * the Remote service (the `./remote` export the `token-usage-remote` row
+ * names) builds as its own entry so it carries its
  * `@deepseek-ai/dsh-typert-protocol` import without forcing it on the
  * capture plugin's consumers.
  */
 export default defineConfig([
   {
-    entry: ['lib/types/index.js', 'lib/types/invariant.js'],
+    entry: ['lib/types/index.js'],
     outDir: 'lib',
     format: ['esm'],
     platform: 'node',

@@ -359,9 +359,7 @@
       "@deepseek-ai/dsh-spill": ["./packages/spill/spill/src"],
       "@deepseek-ai/dsh-spill-local": ["./packages/spill/spill-local/src"],
       "@deepseek-ai/dsh-spill-policy": ["./packages/spill/spill-policy/src"],
-      "@deepseek-ai/dsh-spill-policy/invariant": ["./packages/spill/spill-policy/src/invariant.ts"],
       "@deepseek-ai/dsh-step-timing": ["./packages/util/step-timing/src"],
-      "@deepseek-ai/dsh-step-timing/invariant": ["./packages/util/step-timing/src/invariant.ts"],
       "@deepseek-ai/dsh-storage": ["./packages/storage/storage/src"],
       "@deepseek-ai/dsh-storage-domain": ["./packages/storage/storage-domain/src"],
       "@deepseek-ai/dsh-storage-domain/invariant": ["./packages/storage/storage-domain/src/invariant.ts"],
@@ -388,10 +386,7 @@
       "@deepseek-ai/dsh-timeout": ["./packages/util/timeout/src"],
       "@deepseek-ai/dsh-tmux-context": ["./packages/context/tmux-context/src"],
       "@deepseek-ai/dsh-token-meter": ["./packages/llm/token-meter/src"],
-      "@deepseek-ai/dsh-token-meter/invariant": ["./packages/llm/token-meter/src/invariant.ts"],
-      "@deepseek-ai/dsh-token-usage/invariant": ["./packages/session/token-usage/src/invariant.ts"],
       "@deepseek-ai/dsh-token-usage-dashboard": ["./packages/bundle/token-usage-dashboard/src"],
-      "@deepseek-ai/dsh-token-usage-dashboard/invariant": ["./packages/bundle/token-usage-dashboard/src/invariant.ts"],
       "@deepseek-ai/dsh-tool-ask-user": ["./packages/interaction/tool-ask-user/src"],
       "@deepseek-ai/dsh-tool-bash": ["./packages/shell/tool-bash/src"],
       "@deepseek-ai/dsh-tool-bash-persistent": ["./packages/shell/tool-bash-persistent/src"],
@@ -435,8 +430,7 @@
       "@deepseek-ai/dsh-workflow-worker-thread": ["./packages/workflow/workflow-worker-thread/src"],
       "@deepseek-ai/dsh-workspace": ["./packages/workspace/workspace/src"],
       "@deepseek-ai/dsh-workspace/invariant": ["./packages/workspace/workspace/src/invariant.ts"],
-      "@deepseek-ai/dsh-zoned-time": ["./packages/util/zoned-time/src"],
-      "@deepseek-ai/dsh-zoned-time/invariant": ["./packages/util/zoned-time/src/invariant.ts"]
+      "@deepseek-ai/dsh-zoned-time": ["./packages/util/zoned-time/src"]
       // END generated package aliases
     }
   }

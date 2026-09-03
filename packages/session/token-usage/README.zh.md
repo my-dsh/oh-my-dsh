@@ -65,6 +65,8 @@ kind: "package-reference"
 
 数据库携带自己的单调 `SCHEMA_VERSION`（当前为 3），与 session 持久化 schema 相互独立。空数据库初始化到当前版本；其他任何版本一律拒绝而非就地迁移（预发布立场：后端拒绝旧磁盘格式）。`(time)` 索引同时服务于汇总读取与 `purge`——两者都按 epoch `time` 界定行集；写入时的 `date` 列保持为只写元数据。
 
+不发布运行时不变量 companion：捕获折叠所依赖的事件关系（agent loop 每个进入的 step 恰好一个 `step/end`、单调 turn 编号、`assistant/message` 的 step 坐标）由其拥有方在运行时校验；store 自行容纳写入错误，捕获失败绝不会逃逸进 agent loop。
+
 <a id="model-experience"></a>
 ## Model Experience
 
@@ -74,7 +76,6 @@ kind: "package-reference"
 
 无；本包既不组装也不发送 provider 请求。
 
-<a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work
 
 - **`date` 列只写不读**——写入方按自身本地时区为每行写入 `date` 键，但所有读取与 purge 都按调用方时区的 epoch `time` 窗口界定行集，已发布的查询从不使用该列；删除它留待下一次破坏性 schema 变更。

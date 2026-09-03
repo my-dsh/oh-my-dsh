@@ -25,6 +25,8 @@ A fall-back overlap yields two instants and the earliest one is the documented c
 
 It is a **library, not a service or plugin**: no `ctx`, registers nothing, holds no state, emits no events. Error identities stay with the callers — schedule maps the outcomes onto its typed `ScheduleInputError` codes, token-usage fails loud with its own message — because gap and range policies are consumer vocabulary, not resolution mechanics.
 
+No invariant companion is published because this pure utility owns no event stream or mutable runtime data; its resolution algebra is enforced by unit tests against real zone transitions.
+
 ## API
 
 ```ts
