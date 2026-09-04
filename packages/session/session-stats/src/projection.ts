@@ -1,6 +1,6 @@
 /**
  * The `sessionStats` projection unit: a pure fold of step boundaries, stream
- * chunks, tool pairs, and assembled assistant messages into whole-log counts
+ * embedded streams, tool pairs, and assembled assistant messages into whole-log counts
  * and wall times.
  *
  * `step/end` — not `assistant/message` — is the counted step event because it
@@ -26,7 +26,7 @@
  */
 
 import { z } from 'zod'
-import type { StreamChunk } from '@deepseek-ai/dsh-llm/types'
+import { expandAssistantStream, type AssistantStreamRecord, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import type { StepTimingFold } from '@deepseek-ai/dsh-step-timing'
 import {
@@ -54,6 +54,12 @@ function isTokenDelta(chunk: StreamChunk): boolean {
     default:
       return false
   }
+}
+
+
+/** First non-empty token timestamp in one durable Assistant stream. */
+function firstTokenTime(stream: readonly AssistantStreamRecord[]): number | null {
+  return expandAssistantStream(stream).find(member => isTokenDelta(member.chunk))?.time ?? null
 }
 
 /* jscpd:ignore-end */
@@ -167,10 +173,12 @@ export const sessionStatsProjectionDefinition = {
           ...state,
           openStep: stepTimingOpen(event.data.turn, event.data.step, event.time),
         }
-      case 'assistant/chunk': {
+      case 'assistant/attempt': {
         const open = state.openStep
         if (open === null || open.turn !== event.data.turn || open.step !== event.data.step) return state
-        const stamped = stepTimingOnToken(open, event.time, isTokenDelta(event.data.chunk))
+        const first = firstTokenTime(event.data.stream)
+        if (first === null) return state
+        const stamped = stepTimingOnToken(open, first, true)
         if (stamped === open) return state
         return { ...state, openStep: stamped }
       }
@@ -194,7 +202,13 @@ export const sessionStatsProjectionDefinition = {
         // One assembled message per step: after the first stamp, a defensive
         // duplicate folds to the identical reference.
         if (open === null || open.turn !== event.data.turn || open.step !== event.data.step) return state
-        const next = stepTimingOnMessage(open, event.time)
+        // First-token fallback: the durable stream rides the message event, so
+        // a step whose attempt arrived before `step/start` interest still stamps.
+        const firstToken = open.firstTokenTime ?? firstTokenTime(event.data.stream)
+        const stamped = firstToken === null || open.firstTokenTime !== null
+          ? open
+          : stepTimingOnToken(open, firstToken, true)
+        const next = stepTimingOnMessage(stamped, event.time)
         if (next === open) return state
         const llmMs = stepTimingLlmMs(next)
         if (llmMs === null) return state

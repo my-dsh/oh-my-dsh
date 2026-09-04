@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-token-usage",
   "description": "Web GUI Token consumption dashboard: a floating action button and panel registering into shell.overlay, showing daily per-(provider, model) token totals, average throughput, average TTFT, and cache-hit ratio",
-  "version": "0.1.2-rc.1",
+  "version": "0.1.3-alpha.1",
   "publishConfig": {
     "access": "public"
   },

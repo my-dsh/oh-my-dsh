@@ -16,7 +16,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import type { StreamChunk, TokenUsage } from '@deepseek-ai/dsh-llm/types'
+import { expandAssistantStream, type AssistantStreamRecord, type StreamChunk, type TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { StepTimingFold } from '@deepseek-ai/dsh-step-timing'
 import {
@@ -45,6 +45,11 @@ function isTokenDelta(chunk: StreamChunk): boolean {
     default:
       return false
   }
+}
+
+/** Find the timestamp of the first non-empty token delta in an assistant stream. */
+function firstTokenTime(stream: readonly AssistantStreamRecord[]): number | null {
+  return expandAssistantStream(stream).find(member => isTokenDelta(member.chunk))?.time ?? null
 }
 
 /* jscpd:ignore-end */
@@ -123,13 +128,14 @@ export function apply(ctx: Context): void {
           stash: null,
         })
         return
-      case 'assistant/chunk': {
+      case 'assistant/attempt': {
         const open = openCaptureOf(session)
         if (open === undefined || open.fold.turn !== event.data.turn || open.fold.step !== event.data.step) return
-        setOpenCapture(session, {
-          ...open,
-          fold: stepTimingOnToken(open.fold, event.time, isTokenDelta(event.data.chunk)),
-        })
+        const first = firstTokenTime(event.data.stream)
+        if (first === null) return
+        const stamped = stepTimingOnToken(open.fold, first, true)
+        if (stamped === open.fold) return
+        setOpenCapture(session, { ...open, fold: stamped })
         return
       }
       case 'tool/call': {
@@ -162,6 +168,13 @@ export function apply(ctx: Context): void {
         // set; ignore it so the first message's facts are preserved. The
         // stash exists exactly when the stamp does, set together below.
         if (open.fold.messageTime !== null) return
+        // First-token fallback: the durable stream rides the message event, so
+        // a step whose attempt arrived before `step/start` interest still stamps.
+        const firstToken = open.fold.firstTokenTime ?? firstTokenTime(event.data.stream)
+        let fold = open.fold
+        if (firstToken !== null && fold.firstTokenTime === null) {
+          fold = stepTimingOnToken(fold, firstToken, true)
+        }
         const usage = event.data.usage
         if (usage === undefined) {
           // No provider accounting for this call (e.g. a locally-served step
@@ -176,7 +189,7 @@ export function apply(ctx: Context): void {
         // the complete tool wall time.
         const source = event.data.message.source
         setOpenCapture(session, {
-          fold: stepTimingOnMessage(open.fold, event.time),
+          fold: stepTimingOnMessage(fold, event.time),
           stash: { usage, provider: source.provider, model: source.model },
         })
         return
