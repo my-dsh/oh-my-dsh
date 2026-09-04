@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-token-usage",
   "description": "Cross-session token-usage persistence: a SQLite-backed TokenUsageStore Service Definition that captures per-request provider-reported usage from the session firehose for daily, per-(provider, model) aggregation",
-  "version": "0.1.2-alpha.5",
+  "version": "0.1.2-rc.1",
   "publishConfig": {
     "access": "public"
   },
