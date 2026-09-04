@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-step-timing",
   "description": "Zero-dependency pure timing fold for one agent-loop step: step boundaries, first-token instant, matched tool call→result wall time, and assembled-message stamping shared by session-stats and token-usage capture",
-  "version": "0.1.2-alpha.5",
+  "version": "0.1.2-rc.1",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-token-usage-dashboard",
   "description": "The Token consumption dashboard as a profile bundle: a patch layer inserting the host-side token-usage listener and its SQLite provider plus the browser dashboard panel over any web-surface profile",
-  "version": "0.1.2-alpha.5",
+  "version": "0.1.2-rc.1",
   "publishConfig": {
     "access": "public"
   },
