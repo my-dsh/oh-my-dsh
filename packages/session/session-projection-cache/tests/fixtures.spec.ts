@@ -3,7 +3,7 @@
  * real `session_projcache` media, each produced by driving the named release
  * through its own web app (session created over RPC, real model turns, a
  * rename): the v3 whole-unit file (published 0.1.1-rc.2), a v4 per-record
- * document (published 0.1.2-alpha.3), a current v5 document, and the
+ * document (published 0.1.2-alpha.3), a published v5 document, and the
  * v5-stamped lineage-less document reproducing byte-for-byte what the
  * formerly unguarded legacy bootstrap wrote over v3 records. Each must
  * recover through the real storage stack — the domain opens and the listing
@@ -118,7 +118,7 @@ async function placeDoc(root: string, id: string, name: string): Promise<Fixture
 
 /**
  * Drive a live write over a recovered session id and assert the archived
- * document is replaced by a current-version one: v5 stamp, lineage present,
+ * document is replaced by a current-version one: v6 stamp, lineage present,
  * and the freshly folded title — the write path never keeps the old format.
  */
 async function assertRewrite(ctx: Context, root: string, id: SessionId): Promise<void> {

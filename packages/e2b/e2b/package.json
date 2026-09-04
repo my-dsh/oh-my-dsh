@@ -27,7 +27,8 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-http-proxy": "workspace:^"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "workspace:^",
@@ -47,6 +48,8 @@
     "@deepseek-ai/dsh-session-projection": "workspace:^",
     "@deepseek-ai/dsh-subprocess-e2b": "workspace:^",
     "@deepseek-ai/dsh-terminal": "workspace:^",
-    "@deepseek-ai/dsh-terminal-bash": "workspace:^"
+    "@deepseek-ai/dsh-terminal-bash": "workspace:^",
+    "@deepseek-ai/dsh-http-proxy": "workspace:^",
+    "@deepseek-ai/dsh-launch-environment": "workspace:^"
   }
 }

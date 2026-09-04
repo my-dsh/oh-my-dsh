@@ -410,14 +410,15 @@ describe('SessionProjectionCache listing read', () => {
     expect(block?.asOfSeq).toBe(4)
   })
 
-  it('returns undefined when the stored record is version-mismatched', async () => {
+  it('returns undefined when the stored record version is not accepted', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-projcache-'))
     roots.push(root)
-    // A stale version-stamped document is discarded at open: absent record.
+    // Version 2 is neither current nor declared compatible, so the document
+    // is discarded at open and the record reads as absent.
     const path = recordPath(root, SessionId('all-stale'))
     await mkdir(dirname(path), { recursive: true })
     await writeFile(path, JSON.stringify({
-      version: projectionCacheDomainSpec.version + 1,
+      version: 2,
       record: {
         identity: { createdAt: 0, isSeeded: false, inheritedEventCount: 0 },
         rows: { 'cache-test/marks': { ver: 1, seq: 4, val: { marks: ['old'] } } },
