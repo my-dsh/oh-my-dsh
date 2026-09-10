@@ -10,8 +10,8 @@
 # The listener injects `tokenUsageStore`, so it activates only after the
 # provider mounts; order in this list is informational. The browser panel needs
 # the web surface already present (client runtime, connection, ui-layout), so
-# this bundle composes over a web-surface profile and must not mount alongside
-# `@deepseek-ai/dsh-web-app`, which already includes these three rows.
+# this bundle composes over a web-surface profile such as the shipped `web`
+# template; the `dsh-web-app` bundle does not mount these rows.
 
 - insert:
     - id: token-usage-sqlite

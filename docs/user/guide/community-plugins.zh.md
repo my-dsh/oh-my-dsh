@@ -2,7 +2,7 @@
 
 [English](community-plugins.md) | 中文
 
-三个在 Harness 仓库之外维护的示例插件可经 `dsh plugin` 从 GitHub 安装。每个项目的 README 才是当前契约，请在使用前对照插件自己的页面进行核对。
+三个在 Harness 仓库之外维护的示例插件可经 `dsh plugin` 从 GitHub 安装。每个项目的 README 才是当前契约，请在使用前对照插件自己的页面进行核对。Token 用量看板同时以本仓库内置的 `@deepseek-ai/dsh-token-usage-dashboard` bundle 提供——部署方将其加入自己 profile 的 `dsh.profile.bundles` 即可，无需安装 tarball。
 
 这些第三方插件仅作为互操作参考；收录不代表 DeepSeek 的认可、推荐、合作关系或持续支持承诺。
 
@@ -26,7 +26,7 @@ dsh plugin --profile web add github:my-dsh/dsh-web-search-tavily
 | [`dsh-token-usage-dashboard`](https://github.com/my-dsh/dsh-token-usage-dashboard) | 跨会话 Token 用量看板：事件监听器写入 SQLite，外加 `shell.overlay` 浏览器面板 | `dsh plugin --profile <name> add https://github.com/my-dsh/dsh-token-usage-dashboard/releases/download/dist/dsh-token-usage-dashboard-dist.tgz` |
 | [`dsh-web-search-tavily`](https://github.com/my-dsh/dsh-web-search-tavily) | 注册到 `web` 能力缝的 Tavily 后端搜索 provider | `dsh plugin --profile <name> add github:my-dsh/dsh-web-search-tavily` |
 
-session-attention 和 token-usage-dashboard 插件在 web surface 上添加一个 UI 面板；它们基于 web surface profile 组合，且与已挂载相同条目的内置 `@deepseek-ai/dsh-web-app` bundle 互斥。搜索 provider 需要一个 Tavily API key，可写入 DSH 凭据文件（`~/.dsh/.credentials.yaml`）的 `refs:` 下，或在启动环境中导出。
+session-attention 和 token-usage-dashboard 插件在 web surface 上添加一个 UI 面板；二者基于 web surface profile（如随附的 `web` 模板）组合，`dsh-web-app` bundle 并不挂载它们。搜索 provider 需要一个 Tavily API key，可写入 DSH 凭据文件（`~/.dsh/.credentials.yaml`）的 `refs:` 下，或在启动环境中导出。
 
 ## 更多细节
 

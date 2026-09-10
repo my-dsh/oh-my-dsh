@@ -2,7 +2,7 @@
 
 English | [中文](community-plugins.zh.md)
 
-Three example plugins maintained outside the Harness repository install from GitHub with `dsh plugin`. Each README in that project is the current contract, so verify a plugin against its own page before relying on it.
+Three example plugins maintained outside the Harness repository install from GitHub with `dsh plugin`. Each README in that project is the current contract, so verify a plugin against its own page before relying on it. The token-usage dashboard also ships in this repository as the in-box `@deepseek-ai/dsh-token-usage-dashboard` bundle, which a deployment adds to its profile's `dsh.profile.bundles` instead of installing the tarball.
 
 These third-party plugins are provided as interoperability examples only. Their presence here does not imply endorsement, recommendation, partnership, or ongoing support by DeepSeek.
 
@@ -26,7 +26,7 @@ Each command reports the installing package, and the bundle joins the profile's 
 | [`dsh-token-usage-dashboard`](https://github.com/my-dsh/dsh-token-usage-dashboard) | A cross-session token-usage dashboard: an event-listener capture into SQLite plus a browser panel in `shell.overlay` | `dsh plugin --profile <name> add https://github.com/my-dsh/dsh-token-usage-dashboard/releases/download/dist/dsh-token-usage-dashboard-dist.tgz` |
 | [`dsh-web-search-tavily`](https://github.com/my-dsh/dsh-web-search-tavily) | A Tavily-backed search provider registered into the `web` capability seam | `dsh plugin --profile <name> add github:my-dsh/dsh-web-search-tavily` |
 
-The session-attention and token-usage-dashboard plugins add a UI panel on a web surface; they compose over a web-surface profile and are mutually exclusive with the in-box `@deepseek-ai/dsh-web-app` bundle that already mounts the same entries. The search provider requires a Tavily API key, either written into the DSH credential file (`~/.dsh/.credentials.yaml`) under `refs:` or exported in the launching environment.
+The session-attention and token-usage-dashboard plugins add a UI panel on a web surface; both compose over a web-surface profile such as the shipped `web` template, and the `dsh-web-app` bundle does not mount them. The search provider requires a Tavily API key, either written into the DSH credential file (`~/.dsh/.credentials.yaml`) under `refs:` or exported in the launching environment.
 
 ## More detail
 
