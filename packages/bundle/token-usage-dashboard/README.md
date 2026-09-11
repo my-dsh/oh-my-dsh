@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The Token consumption dashboard as a profile bundle: one install gives both ends of the feature — the host-side capture (SQLite provider + session listener) and the browser dashboard panel. `@deepseek-ai/dsh-web-app` already includes these same three rows, so this bundle exists to add the full dashboard to a web-surface profile that does not mount it. A profile that already mounts `@deepseek-ai/dsh-web-app` must not install this bundle.
+The Token consumption dashboard as a profile bundle: one install gives both ends of the feature — the host-side capture (SQLite provider + session listener + Typert Remote service) and the browser dashboard panel. It composes over any web-surface profile, including ones built on `@deepseek-ai/dsh-web-app`, which does not mount these rows.
 
 ## Table of Contents
 
@@ -35,7 +35,7 @@ The browser panel renders only inside a web surface, so the target profile must 
 
 ### What you get
 
-Three rows: the SQLite provider behind `tokenUsageStore`, the session/event listener that appends per-request usage records, and the floating-button dashboard panel registered into `shell.overlay`.
+Four rows: the SQLite provider behind `tokenUsageStore`, the session/event listener that appends per-request usage records, the Typert Remote service exposing daily summaries, and the floating-button dashboard panel registered into `shell.overlay`.
 
 -----
 
@@ -69,14 +69,13 @@ None, as the inserted listener only observes the session stream and persists pro
 
 #### KV Cache effect
 
-None; neither inserted host row nor the client panel assembles a provider request.
+None; none of the inserted host rows nor the client panel assembles or sends a provider request.
 
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
 
 - **A web surface is required** — the browser panel registers into `shell.overlay` (owned by `@deepseek-ai/dsh-client-ui-layout`) and reads the `tokenUsage` wire domain, so this bundle composes over a web-surface profile and not a host-only or headless one.
-- **Mutually exclusive with `@deepseek-ai/dsh-web-app`** — that bundle already includes the same three rows, so installing both registers the `tokenUsageStore` service twice and fails the load.
 - **Local timezone day bucketing** — the aggregate groups records by calendar day in the host's local timezone, matching the panel's day picker, rather than UTC. A locale-configured bucketing mode is deferred until a deployment states a requirement.
 - **No retention policy** — the store never auto-expires data; growth is bounded by `purge()` calls.
 

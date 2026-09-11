@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 概述
 
-以 profile 组合包形式交付的 Token 消耗看板：一次安装同时提供该功能的前后端两端——宿主侧采集（SQLite provider + session 监听器）和浏览器看板面板。`@deepseek-ai/dsh-web-app` 已包含同样的三行，因此此组合包的存在是为了在不引入整个 web-app 组合包的前提下，为某个未挂载它的 web 表层 profile 补上完整看板。已挂载 `@deepseek-ai/dsh-web-app` 的 profile 不得安装此组合包。
+以 profile 组合包形式交付的 Token 消耗看板：一次安装同时提供该功能的前后端两端——宿主侧采集（SQLite provider + session 监听器 + Typert Remote 服务）和浏览器看板面板。它叠加在任意 web 表层 profile 之上，包括基于 `@deepseek-ai/dsh-web-app` 的 profile——后者并未挂载这些行。
 
 ## 目录
 
@@ -69,14 +69,13 @@ patch 文档（[`cordis.patch.yml`](cordis.patch.yml)）插入四行：
 
 #### KV Cache 影响
 
-无；两条插入的宿主行与客户端面板都不装配、也不发送 provider 请求。
+无；插入的宿主行与客户端面板都不装配、也不发送 provider 请求。
 
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
 
 - **需要 web 表层**——浏览器面板注册进 `shell.overlay`（由 `@deepseek-ai/dsh-client-ui-layout` 声明）并读取 `tokenUsage` wire 域，因此此组合包叠加在某个 web 表层 profile 之上，而不是 host-only 或 headless profile。
-- **与 `@deepseek-ai/dsh-web-app` 互斥**——后者已包含同样的三行，两者都装会重复注册 `tokenUsageStore` 服务并导致加载失败。
 - **按本地时区进行按日分桶**——聚合按宿主的本地时区把记录归入自然日，匹配面板的日期选择器，而不是 UTC。按 locale 配置分桶模式推迟到某个部署提出需求再处理。
 - **无保留策略**——store 从不过期数据；增长由 `purge()` 调用约束。
 
