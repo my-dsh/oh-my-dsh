@@ -20,7 +20,7 @@ import type {
   TokenUsageDailySummaryView,
   TokenUsageGroupView,
 } from '@deepseek-ai/dsh-api-remotes/client'
-import { Button, IconDataOutline16, IconRefreshOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, IconDataOutlineRegular, IconRefreshOutlineRegular, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TokenUsageDashboardInjected } from './slots.ts'
 import {
   browserTimeZone, daysAgoLocalKey, endOfLastMonthLocalKey, formatCacheHit,
@@ -93,7 +93,7 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
         aria-label={t('fab.label')}
         onClick={() => { setOpen(true) }}
       >
-        <IconDataOutline16 size={18} />
+        <IconDataOutlineRegular size={18} />
       </button>
       <Modal
         open={open}
@@ -196,7 +196,7 @@ export function TokenUsageDashboard(props: TokenUsageDashboardProps) {
           <Button
             size="sm"
             variant="ghost"
-            icon={<IconRefreshOutline16 size={14} />}
+            icon={<IconRefreshOutlineRegular size={14} />}
             disabled={status === 'loading'}
             onClick={() => { void load({ mode, date, startDate, endDate }) }}
             className={css.refreshButton}
